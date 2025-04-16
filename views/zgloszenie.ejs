@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Zgłoszenie Szkody</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+    <h1>Zgłoszenie Szkody</h1>
+    <form method="POST" action="/zgloszenie">
+        <label>Imię: <input type="text" name="Imie" required></label><br>
+        <label>Nazwisko: <input type="text" name="Nazwisko" required></label><br>
+        <label>Adres: <input type="text" name="Adres" required></label><br>
+        <label>Telefon: <input type="text" name="Telefon" required></label><br>
+        <label>Mail: <input type="email" name="Mail" required></label><br>
+        <label>Opis: <textarea name="Opis" required></textarea></label><br>
+        <button type="submit">Zgłoś</button>
+    </form>
+</body>
+
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Ubezpieczyciela</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+    <header>
+        <h1>Panel Ubezpieczyciela</h1>
+    </header>
+
+    <main>
+        <!-- Agent -->
+        <div class="card">
+            <h2>Agenci</h2>
+            <form action="/agent" method="post">
+                <input name="Imie" placeholder="Imię" required>
+                <input name="Nazwisko" placeholder="Nazwisko" required>
+                <input name="Specjalizacja" placeholder="Specjalizacja">
+                <button type="submit">Dodaj agenta</button>
+            </form>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Imię</th>
+                        <th>Nazwisko</th>
+                        <th>Specjalizacja</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% agenci.forEach(agent => { %>
+                        <tr>
+                            <td>
+                                <%= agent.Imie %>
+                            </td>
+                            <td>
+                                <%= agent.Nazwisko %>
+                            </td>
+                            <td>
+                                <%= agent.Specjalizacja %>
+                            </td>
+                            <td>
+                                <button onclick="toggleEdit('agent-<%= agent.Id_agent %>')"><i class="fas fa-pen"></i></button>
+                                <form action="/agent/usun/<%= agent.Id_agent %>" method="post" style="display:inline;">
+                                    <button onclick="return confirm('Usunąć agenta?')"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr id="edit-agent-<%= agent.Id_agent %>" class="edit-row hidden">
+                            <td colspan="4">
+                                <form action="/agent/edytuj/<%= agent.Id_agent %>" method="post">
+                                    <input name="Imie" value="<%= agent.Imie %>" required>
+                                    <input name="Nazwisko" value="<%= agent.Nazwisko %>" required>
+                                    <input name="Specjalizacja" value="<%= agent.Specjalizacja %>">
+                                    <button type="submit">Zapisz</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Kategoria -->
+        <div class="card">
+            <h2>Kategorie</h2>
+            <form action="/kategoria" method="post">
+                <input name="Nazwa" placeholder="Nazwa kategorii" required>
+                <button type="submit">Dodaj kategorię</button>
+            </form>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nazwa</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% kategorie.forEach(kat => { %>
+                        <tr>
+                            <td>
+                                <%= kat.Nazwa %>
+                            </td>
+                            <td>
+                                <button onclick="toggleEdit('kat-<%= kat.Id_kategoria %>')"><i class="fas fa-pen"></i></button>
+                                <form action="/kategoria/usun/<%= kat.Id_kategoria %>" method="post" style="display:inline;">
+                                    <button onclick="return confirm('Usunąć kategorię?')"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr id="edit-kat-<%= kat.Id_kategoria %>" class="edit-row hidden">
+                            <td colspan="2">
+                                <form action="/kategoria/edytuj/<%= kat.Id_kategoria %>" method="post">
+                                    <input name="Nazwa" value="<%= kat.Nazwa %>" required>
+                                    <button type="submit">Zapisz</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Sprawy -->
+        <div class="card">
+            <h2>Sprawy</h2>
+            <form action="/sprawa" method="post">
+                <input name="Imie" placeholder="Imię" required>
+                <input name="Nazwisko" placeholder="Nazwisko" required>
+                <input name="Adres" placeholder="Adres">
+                <input name="Telefon" placeholder="Telefon">
+                <input name="Mail" placeholder="Email">
+                <input name="Id_kategoria" placeholder="ID Kategorii">
+                <input name="Opis" placeholder="Opis">
+                <input name="Stan" placeholder="Stan">
+                <input name="Id_agent" placeholder="ID Agenta">
+                <button type="submit">Dodaj sprawę</button>
+            </form>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Imię</th>
+                        <th>Nazwisko</th>
+                        <th>Adres</th>
+                        <th>Telefon</th>
+                        <th>Email</th>
+                        <th>Kategoria</th>
+                        <th>Opis</th>
+                        <th>Stan</th>
+                        <th>Agent</th>
+                        <th>Akcje</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% sprawy.forEach(sprawa => { %>
+                        <tr>
+                            <td>
+                                <%= sprawa.Imie %>
+                            </td>
+                            <td>
+                                <%= sprawa.Nazwisko %>
+                            </td>
+                            <td>
+                                <%= sprawa.Adres %>
+                            </td>
+                            <td>
+                                <%= sprawa.Telefon %>
+                            </td>
+                            <td>
+                                <%= sprawa.Mail %>
+                            </td>
+                            <td>
+                                <%= sprawa.Id_kategoria %>
+                            </td>
+                            <td>
+                                <%= sprawa.Opis %>
+                            </td>
+                            <td>
+                                <%= sprawa.Stan %>
+                            </td>
+                            <td>
+                                <%= sprawa.Id_agent %>
+                            </td>
+                            <td>
+                                <button onclick="toggleEdit('sprawa-<%= sprawa.Id_sprawa %>')"><i class="fas fa-pen"></i></button>
+                                <form action="/sprawa/usun/<%= sprawa.Id_sprawa %>" method="post" style="display:inline;">
+                                    <button onclick="return confirm('Usunąć sprawę?')"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr id="edit-sprawa-<%= sprawa.Id_sprawa %>" class="edit-row hidden">
+                            <td colspan="10">
+                                <form action="/sprawa/edytuj/<%= sprawa.Id_sprawa %>" method="post">
+                                    <div class="form-inline">
+                                        <input name="Imie" value="<%= sprawa.Imie %>" required>
+                                        <input name="Nazwisko" value="<%= sprawa.Nazwisko %>" required>
+                                        <input name="Adres" value="<%= sprawa.Adres %>">
+                                        <input name="Telefon" value="<%= sprawa.Telefon %>">
+                                        <input name="Mail" value="<%= sprawa.Mail %>">
+                                        <input name="Id_kategoria" value="<%= sprawa.Id_kategoria %>">
+                                        <input name="Opis" value="<%= sprawa.Opis %>">
+                                        <input name="Stan" value="<%= sprawa.Stan %>">
+                                        <input name="Id_agent" value="<%= sprawa.Id_agent %>">
+                                        <button type="submit">Zapisz</button>
+                                    </div>
+                                </form>
+                            </td>
+                        </tr>
+                        <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        function toggleEdit(id) {
+            const row = document.getElementById('edit-' + id);
+            if (row) {
+                row.classList.toggle('hidden');
+            }
+        }
+    </script>
+</body>
+
+</html>

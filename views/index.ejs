@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Panel główny</title>
+</head>
+
+<body>
+    <header style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>Witaj,
+            <%= user.imie %>!</h1>
+        <a href="/logout">Wyloguj się</a>
+    </header>
+
+    <p>Twoja rola:
+        <%= user.rola %>
+    </p>
+
+    <% if (user.rola === 'ubezpieczyciel') { %>
+        <h2>Panel ubezpieczyciela</h2>
+
+        <h3>Dodaj agenta</h3>
+        <form action="/agent" method="POST">
+            <input type="text" name="Imie" placeholder="Imię" required />
+            <input type="text" name="Nazwisko" placeholder="Nazwisko" required />
+            <input type="text" name="Specjalizacja" placeholder="Specjalizacja" />
+            <button type="submit">Dodaj</button>
+        </form>
+
+        <h3>Dodaj kategorię</h3>
+        <form action="/kategoria" method="POST">
+            <input type="text" name="Nazwa" placeholder="Nazwa kategorii" required />
+            <button type="submit">Dodaj</button>
+        </form>
+
+        <h3>Lista zgłoszeń:</h3>
+        <ul>
+            <% sprawy.forEach(sprawa => { %>
+                <li>
+                    <strong><%= sprawa.Imie %> <%= sprawa.Nazwisko %></strong><br/> Opis:
+                    <%= sprawa.Opis %><br/> Stan:
+                        <%= sprawa.Stan %><br/>
+                            <form action="/sprawa/usun/<%= sprawa.Id_sprawa %>" method="POST" style="display:inline;">
+                                <button type="submit">Usuń</button>
+                            </form>
+                            <a href="/sprawa/edytuj/<%= sprawa.Id_sprawa %>">Edytuj</a>
+                </li>
+                <% }) %>
+        </ul>
+
+        <% } else if (user.rola === 'ubezpieczony') { %>
+            <h2>Panel klienta</h2>
+
+            <a href="/zgloszenie">Zgłoś nową sprawę</a>
+
+            <h3>Twoje zgłoszenia</h3>
+            <ul>
+                <% sprawy.forEach(sprawa => { %>
+                    <% if (sprawa.Mail === user.email) { %>
+                        <li>
+                            <strong><%= sprawa.Imie %> <%= sprawa.Nazwisko %></strong><br/> Opis:
+                            <%= sprawa.Opis %><br/> Stan:
+                                <%= sprawa.Stan %>
+                        </li>
+                        <% } %>
+                            <% }) %>
+            </ul>
+
+            <% } else { %>
+                <p>Nieznana rola użytkownika.</p>
+                <% } %>
+</body>
+
+</html>

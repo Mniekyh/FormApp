@@ -1,0 +1,37 @@
+<h2>Edytuj sprawę</h2>
+<form method="POST" action="/sprawa/edytuj/<%= sprawa.Id_sprawa %>">
+    <label>Imię: <input name="Imie" value="<%= sprawa.Imie %>" /></label><br />
+    <label>Nazwisko: <input name="Nazwisko" value="<%= sprawa.Nazwisko %>" /></label><br />
+    <label>Adres: <input name="Adres" value="<%= sprawa.Adres %>" /></label><br />
+    <label>Telefon: <input name="Telefon" value="<%= sprawa.Telefon %>" /></label><br />
+    <label>Mail: <input name="Mail" value="<%= sprawa.Mail %>" /></label><br />
+    <label>Opis: <textarea name="Opis"><%= sprawa.Opis %></textarea></label><br />
+
+    <label>Kategoria:</label>
+    <select name="Id_kategoria">
+        <% categories.forEach(k => { %>
+            <option value="<%= k.Id_kategoria %>" <%= k.Id_kategoria === sprawa.Id_kategoria ? "selected" : "" %>>
+                <%= k.Nazwa %>
+            </option>
+        <% }); %>
+    </select><br />
+
+    <label>Stan:</label>
+    <select name="Stan">
+        <option value="Oczekuje" <%= sprawa.Stan === 'Oczekuje' ? "selected" : "" %>>Oczekuje</option>
+        <option value="W trakcie" <%= sprawa.Stan === 'W trakcie' ? "selected" : "" %>>W trakcie</option>
+        <option value="Zamknięta" <%= sprawa.Stan === 'Zamknięta' ? "selected" : "" %>>Zamknięta</option>
+    </select><br />
+
+    <label>Agent:</label>
+    <select name="Id_agent">
+        <option value="">-- brak przypisanego --</option>
+        <% agents.forEach(a => { %>
+            <option value="<%= a.Id_agent %>" <%= a.Id_agent === sprawa.Id_agent ? "selected" : "" %>>
+                <%= a.Imie %> <%= a.Nazwisko %>
+            </option>
+        <% }); %>
+    </select><br />
+
+    <button type="submit">Zapisz</button>
+</form>
