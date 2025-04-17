@@ -1,46 +1,49 @@
 const express = require('express');
 const session = require('express-session');
+const bodyParser = require('body-parser');
+const path = require('path');
 const db = require('./db');
+
 const app = express();
-const port = 3000;
+const PORT = 3000;
 
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
 
-// Sesje
 app.use(session({
-    secret: 'sekretny_klucz',
+    secret: 'tajnehaslo',
     resave: false,
     saveUninitialized: true
 }));
 
-// Sprawdzenie zalogowania
-const isLoggedIn = (req) => !!req.session.user;
+function isLoggedIn(req) {
+    return req.session && req.session.user;
+}
 
-// Strona główna
-app.get('/', (req, res) => {
-    if (!isLoggedIn(req)) return res.redirect('/login');
+// Utworzenie tabeli Ticket (jeśli nie istnieje)
+db.run(`
+    CREATE TABLE IF NOT EXISTS Ticket (
+        Id_ticket INTEGER PRIMARY KEY AUTOINCREMENT,
+        Id_sprawa INTEGER,
+        Tresc TEXT,
+        Data DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(Id_sprawa) REFERENCES Sprawa(Id_sprawa)
+    )
+`);
 
-    const data = {
-        user: req.session.user // <-- dodajemy użytkownika
-    };
+// Login
+app.get('/login', (req, res) => {
+    res.render('login');
+});
 
-    db.all('SELECT * FROM Agent', [], (err, agents) => {
-        if (err) return res.status(500).send(err.message);
-        data.agents = agents;
-
-        db.all('SELECT * FROM Kategoria', [], (err, categories) => {
-            if (err) return res.status(500).send(err.message);
-            data.categories = categories;
-
-            db.all('SELECT * FROM Sprawa', [], (err, sprawy) => {
-                if (err) return res.status(500).send(err.message);
-                data.sprawy = sprawy;
-
-                res.render('index', data);
-            });
-        });
+app.post('/login', (req, res) => {
+    const { email, haslo } = req.body;
+    db.get('SELECT * FROM Uzytkownik WHERE email = ? AND haslo = ?', [email, haslo], (err, user) => {
+        if (err) return res.status(500).send('Błąd serwera');
+        if (!user) return res.send('Nieprawidłowy login lub hasło');
+        req.session.user = user;
+        res.redirect('/');
     });
 });
 
@@ -51,130 +54,144 @@ app.get('/register', (req, res) => {
 
 app.post('/register', (req, res) => {
     const { imie, nazwisko, email, haslo, rola } = req.body;
-
-    // Sprawdzenie, czy email jest już w bazie
-    db.get('SELECT * FROM Uzytkownik WHERE email = ?', [email], (err, row) => {
-        if (err) {
-            console.error('Błąd przy sprawdzaniu istniejącego użytkownika:', err);
-            return res.send('Błąd podczas rejestracji');
-        }
-        
-        if (row) {
-            return res.send('Użytkownik z tym emailem już istnieje!');
-        }
-
-        // Dodanie nowego użytkownika
-        db.run('INSERT INTO Uzytkownik (imie, nazwisko, email, haslo, rola) VALUES (?, ?, ?, ?, ?)',
-            [imie, nazwisko, email, haslo, rola], function (err) {
-                if (err) {
-                    console.error('Błąd przy dodawaniu użytkownika:', err);
-                    return res.send('Błąd podczas rejestracji');
-                }
-                
-                console.log('Nowy użytkownik zarejestrowany:', { imie, nazwisko, email, rola });
-                res.redirect('/login');
-            });
-    });
-});
-
-
-// Logowanie
-app.get('/login', (req, res) => {
-    res.render('login');
-});
-
-app.post('/login', (req, res) => {
-    const { email, password } = req.body;
-
-    db.get('SELECT * FROM Uzytkownik WHERE email = ? AND haslo = ?', [email, password], (err, user) => {
-        if (err || !user) return res.send('Nieprawidłowe dane do logowania');
-
-        req.session.user = user;
-        res.redirect('/');
-    });
-});
-
-// Formularz zgłoszenia
-app.get('/zgloszenie', (req, res) => {
-    res.render('zgloszenie');
-});
-
-app.post('/zgloszenie', (req, res) => {
-    const { Imie, Nazwisko, Adres, Telefon, Mail, Opis } = req.body;
-
-    db.run(`INSERT INTO Sprawa 
-        (Imie, Nazwisko, Id_kategoria, Adres, Telefon, Mail, Opis, Stan, Id_agent) 
-        VALUES (?, ?, NULL, ?, ?, ?, ?, 'Oczekuje', NULL)`,
-        [Imie, Nazwisko, Adres, Telefon, Mail, Opis], () => res.redirect('/zgloszenie'));
-});
-
-// CRUD Agent
-app.post('/agent', (req, res) => {
-    const { Imie, Nazwisko, Specjalizacja } = req.body;
-    db.run('INSERT INTO Agent (Imie, Nazwisko, Specjalizacja) VALUES (?, ?, ?)', [Imie, Nazwisko, Specjalizacja], () => res.redirect('/'));
-});
-
-// CRUD Kategoria
-app.post('/kategoria', (req, res) => {
-    const { Nazwa } = req.body;
-    db.run('INSERT INTO Kategoria (Nazwa) VALUES (?)', [Nazwa], () => res.redirect('/'));
-});
-
-// CRUD Sprawa
-app.post('/sprawa', (req, res) => {
-    const { Imie, Nazwisko, Id_kategoria, Adres, Telefon, Mail, Opis, Stan, Id_agent } = req.body;
-    db.run(`INSERT INTO Sprawa 
-        (Imie, Nazwisko, Id_kategoria, Adres, Telefon, Mail, Opis, Stan, Id_agent) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [Imie, Nazwisko, Id_kategoria, Adres, Telefon, Mail, Opis, Stan, Id_agent],
-        () => res.redirect('/'));
-});
-
-app.post('/sprawa/usun/:id', (req, res) => {
-    db.run('DELETE FROM Sprawa WHERE Id_sprawa = ?', [req.params.id], () => res.redirect('/'));
-});
-
-app.post('/sprawa/edytuj/:id', (req, res) => {
-    const { Imie, Nazwisko, Id_kategoria, Adres, Telefon, Mail, Opis, Stan, Id_agent } = req.body;
-    db.run(`UPDATE Sprawa SET 
-        Imie = ?, Nazwisko = ?, Id_kategoria = ?, Adres = ?, Telefon = ?, Mail = ?, 
-        Opis = ?, Stan = ?, Id_agent = ? WHERE Id_sprawa = ?`,
-        [Imie, Nazwisko, Id_kategoria, Adres, Telefon, Mail, Opis, Stan, Id_agent, req.params.id],
-        () => res.redirect('/'));
-});
-app.get('/sprawa/edytuj/:id', (req, res) => {
-    const id = req.params.id;
-    const data = {};
-
-    db.get('SELECT * FROM Sprawa WHERE Id_sprawa = ?', [id], (err, sprawa) => {
-        if (err || !sprawa) return res.status(404).send("Nie znaleziono sprawy");
-        data.sprawa = sprawa;
-
-        db.all('SELECT * FROM Agent', [], (err, agents) => {
-            if (err) return res.status(500).send(err.message);
-            data.agents = agents;
-
-            db.all('SELECT * FROM Kategoria', [], (err, categories) => {
-                if (err) return res.status(500).send(err.message);
-                data.categories = categories;
-
-                res.render('edytuj', data); // <- renderuje formularz
-            });
+    db.run('INSERT INTO Uzytkownik (imie, nazwisko, email, haslo, rola) VALUES (?, ?, ?, ?, ?)',
+        [imie, nazwisko, email, haslo, rola], function(err) {
+            if (err) return res.send('Błąd przy rejestracji: ' + err.message);
+            res.redirect('/login');
         });
+});
+
+// Logout
+app.get('/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.redirect('/login');
     });
 });
 
-// === Wylogowanie ===
-app.get('/logout', (req, res) => {
+app.post('/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) {
-            console.error('Błąd przy wylogowaniu:', err);
+            console.error('Błąd podczas wylogowania:', err);
+            return res.status(500).send('Błąd podczas wylogowania');
         }
         res.redirect('/login');
     });
 });
 
-// Start serwera
-app.listen(port, () => {
-    console.log(`Serwer działa na http://localhost:${port}`);
+// Strona główna z historią ticketów
+app.get('/', (req, res) => {
+    if (!isLoggedIn(req)) return res.redirect('/login');
+
+    const data = {};
+    const user = req.session.user;
+
+    db.all('SELECT * FROM Agent', [], (err, agents) => {
+        if (err) return res.status(500).send(err.message);
+        data.agents = agents;
+
+        db.all('SELECT * FROM Kategoria', [], (err, categories) => {
+            if (err) return res.status(500).send(err.message);
+            data.categories = categories;
+
+            const query = user.rola === 'ubezpieczony'
+                ? 'SELECT * FROM Sprawa WHERE Id_uzytkownik = ?'
+                : 'SELECT * FROM Sprawa';
+
+            const params = user.rola === 'ubezpieczony' ? [user.id] : [];
+
+            db.all(query, params, (err, sprawy) => {
+                if (err) return res.status(500).send(err.message);
+                data.sprawy = sprawy;
+                data.user = user;
+
+                // Pobierz tickety
+                db.all('SELECT * FROM Ticket', [], (err, tickets) => {
+                    if (err) {
+                        console.error("Błąd przy pobieraniu historii:", err.message);
+                        return res.status(500).send('Błąd przy pobieraniu historii');
+                    }
+                    data.tickets = tickets;
+                    res.render('index', data);
+                });
+            });
+        });
+    });
+});
+
+// Dodanie zgłoszenia
+app.post('/zgloszenie', (req, res) => {
+    if (!isLoggedIn(req)) return res.redirect('/login');
+
+    const { Imie, Nazwisko, Adres, Telefon, Mail, Opis } = req.body;
+    const userId = req.session.user.id;
+
+    db.run(`
+        INSERT INTO Sprawa 
+        (Imie, Nazwisko, Id_kategoria, Adres, Telefon, Mail, Opis, Stan, Id_agent, Id_uzytkownik) 
+        VALUES (?, ?, NULL, ?, ?, ?, ?, 'Oczekuje', NULL, ?)
+    `, [Imie, Nazwisko, Adres, Telefon, Mail, Opis, userId], (err) => {
+        if (err) {
+            console.error("Błąd dodawania sprawy:", err.message);
+            return res.status(500).send("Błąd przy dodawaniu zgłoszenia");
+        }
+        res.redirect('/');
+    });
+});
+
+// Usuwanie sprawy
+app.post('/sprawa/usun/:id', (req, res) => {
+    if (!isLoggedIn(req) || req.session.user.rola !== 'ubezpieczyciel') {
+        return res.status(403).send('Brak uprawnień');
+    }
+
+    const id = req.params.id;
+    db.run('DELETE FROM Sprawa WHERE Id_sprawa = ?', [id], (err) => {
+        if (err) return res.status(500).send("Błąd przy usuwaniu sprawy");
+        res.redirect('/');
+    });
+});
+
+// Edycja sprawy
+app.post('/sprawa/edytuj/:id', (req, res) => {
+    if (!isLoggedIn(req) || req.session.user.rola !== 'ubezpieczyciel') {
+        return res.status(403).send('Brak uprawnień');
+    }
+
+    const { Imie, Nazwisko, Id_kategoria, Adres, Telefon, Mail, Opis, Stan, Id_agent } = req.body;
+    const id = req.params.id;
+
+    db.run(`UPDATE Sprawa SET 
+        Imie = ?, Nazwisko = ?, Id_kategoria = ?, Adres = ?, Telefon = ?, Mail = ?, 
+        Opis = ?, Stan = ?, Id_agent = ? WHERE Id_sprawa = ?`,
+        [Imie, Nazwisko, Id_kategoria, Adres, Telefon, Mail, Opis, Stan, Id_agent, id],
+        (err) => {
+            if (err) return res.status(500).send("Błąd przy edycji sprawy");
+            res.redirect('/');
+        });
+});
+
+// Dodanie ticketa do sprawy
+app.post('/sprawa/:id/ticket', (req, res) => {
+    if (!isLoggedIn(req) || req.session.user.rola !== 'ubezpieczyciel') {
+        return res.status(403).send('Brak uprawnień');
+    }
+
+    const sprawaId = req.params.id;
+    const userId = req.session.user.id;
+    const { Tresc } = req.body;
+
+    db.run(`INSERT INTO Ticket (Id_sprawa, Id_uzytkownik, Tresc) VALUES (?, ?, ?)`,
+        [sprawaId, userId, Tresc],
+        (err) => {
+            if (err) {
+                console.error("Błąd dodawania ticketa:", err.message);
+                return res.status(500).send("Błąd przy dodawaniu ticketa");
+            }
+            res.redirect('/');
+        });
+});
+
+
+app.listen(PORT, () => {
+    console.log(`Serwer działa na http://localhost:${PORT}`);
 });

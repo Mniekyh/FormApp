@@ -4,17 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <title>Logowanie</title>
+    <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
-    <h1>Logowanie</h1>
-    <form action="/login" method="POST">
-        <input type="email" name="email" placeholder="Email" required />
-        <input type="password" name="password" placeholder="Hasło" required />
-        <button type="submit">Zaloguj</button>
-    </form>
+    <div class="container">
+        <h1>Logowanie</h1>
+        <form method="POST" action="/login">
+            <label for="email">Email:</label>
+            <input type="email" name="email" required>
 
-    <p><a href="/register">Nie masz konta? Zarejestruj się</a></p>
+            <label for="password">Hasło:</label>
+            <input type="password" name="haslo" required>
+
+
+            <button type="submit">Zaloguj</button>
+        </form>
+
+        <p>Nie masz konta? <a href="/register">Zarejestruj się</a></p>
+    </div>
 </body>
 
 </html>

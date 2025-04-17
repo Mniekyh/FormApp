@@ -43,6 +43,14 @@ db.serialize(() => {
             FOREIGN KEY (Id_agent) REFERENCES Agent(Id_agent)
         )
     `);
+// Dodaj nową kolumnę jeśli jeszcze nie istnieje
+db.run(`
+  ALTER TABLE Sprawa ADD COLUMN Id_uzytkownik INTEGER
+`, [], (err) => {
+  if (err && !err.message.includes("duplicate column name")) {
+    console.error("Błąd podczas dodawania kolumny Id_uzytkownik:", err.message);
+  }
+});
 
     // Tabela Uzytkownik
     db.run(`

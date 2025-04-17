@@ -3,73 +3,171 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Panel główny</title>
+    <title>Panel użytkownika</title>
+    <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
-    <header style="display: flex; justify-content: space-between; align-items: center;">
+    <header>
         <h1>Witaj,
-            <%= user.imie %>!</h1>
-        <a href="/logout">Wyloguj się</a>
+            <%= user.imie %>
+                <%= user.nazwisko %>!</h1>
+        <p>Rola:
+            <%= user.rola %>
+        </p>
+        <form action="/logout" method="POST" style="display:inline;">
+            <button type="submit">Wyloguj się</button>
+        </form>
     </header>
 
-    <p>Twoja rola:
-        <%= user.rola %>
-    </p>
-
-    <% if (user.rola === 'ubezpieczyciel') { %>
-        <h2>Panel ubezpieczyciela</h2>
-
-        <h3>Dodaj agenta</h3>
-        <form action="/agent" method="POST">
-            <input type="text" name="Imie" placeholder="Imię" required />
-            <input type="text" name="Nazwisko" placeholder="Nazwisko" required />
-            <input type="text" name="Specjalizacja" placeholder="Specjalizacja" />
-            <button type="submit">Dodaj</button>
-        </form>
-
-        <h3>Dodaj kategorię</h3>
-        <form action="/kategoria" method="POST">
-            <input type="text" name="Nazwa" placeholder="Nazwa kategorii" required />
-            <button type="submit">Dodaj</button>
-        </form>
-
-        <h3>Lista zgłoszeń:</h3>
-        <ul>
-            <% sprawy.forEach(sprawa => { %>
-                <li>
-                    <strong><%= sprawa.Imie %> <%= sprawa.Nazwisko %></strong><br/> Opis:
-                    <%= sprawa.Opis %><br/> Stan:
-                        <%= sprawa.Stan %><br/>
-                            <form action="/sprawa/usun/<%= sprawa.Id_sprawa %>" method="POST" style="display:inline;">
-                                <button type="submit">Usuń</button>
-                            </form>
-                            <a href="/sprawa/edytuj/<%= sprawa.Id_sprawa %>">Edytuj</a>
-                </li>
-                <% }) %>
-        </ul>
-
-        <% } else if (user.rola === 'ubezpieczony') { %>
-            <h2>Panel klienta</h2>
-
-            <a href="/zgloszenie">Zgłoś nową sprawę</a>
-
-            <h3>Twoje zgłoszenia</h3>
-            <ul>
-                <% sprawy.forEach(sprawa => { %>
-                    <% if (sprawa.Mail === user.email) { %>
-                        <li>
-                            <strong><%= sprawa.Imie %> <%= sprawa.Nazwisko %></strong><br/> Opis:
-                            <%= sprawa.Opis %><br/> Stan:
+    <main>
+        <% if (user.rola === 'ubezpieczony') { %>
+            <h2>Twoje zgłoszenia</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Imię i nazwisko</th>
+                        <th>Adres</th>
+                        <th>Telefon</th>
+                        <th>Mail</th>
+                        <th>Opis</th>
+                        <th>Stan</th>
+                        <th>Przydzielony agent</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% sprawy.forEach(sprawa => { %>
+                        <tr>
+                            <td>
+                                <%= sprawa.Imie %>
+                                    <%= sprawa.Nazwisko %>
+                            </td>
+                            <td>
+                                <%= sprawa.Adres %>
+                            </td>
+                            <td>
+                                <%= sprawa.Telefon %>
+                            </td>
+                            <td>
+                                <%= sprawa.Mail %>
+                            </td>
+                            <td>
+                                <%= sprawa.Opis %>
+                            </td>
+                            <td>
                                 <%= sprawa.Stan %>
-                        </li>
-                        <% } %>
-                            <% }) %>
-            </ul>
+                            </td>
+                            <td>
+                                <% let agent = agents.find(a => a.Id_agent === sprawa.Id_agent); %>
+                                    <%= agent ? agent.Imie + ' ' + agent.Nazwisko : 'Nieprzydzielony' %>
+                            </td>
+                        </tr>
+                        <% }); %>
+                </tbody>
+            </table>
 
-            <% } else { %>
-                <p>Nieznana rola użytkownika.</p>
+            <h2>Zgłoś nową sprawę</h2>
+            <form action="/zgloszenie" method="POST">
+                <input type="text" name="Imie" placeholder="Imię" required>
+                <input type="text" name="Nazwisko" placeholder="Nazwisko" required>
+                <input type="text" name="Adres" placeholder="Adres" required>
+                <input type="text" name="Telefon" placeholder="Telefon" required>
+                <input type="email" name="Mail" placeholder="Email" required>
+                <textarea name="Opis" placeholder="Opis zgłoszenia" required></textarea>
+                <button type="submit">Zgłoś</button>
+            </form>
+            <% } else if (user.rola === 'ubezpieczyciel') { %>
+                <h2>Wszystkie zgłoszenia</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Imię</th>
+                            <th>Nazwisko</th>
+                            <th>Kategoria</th>
+                            <th>Adres</th>
+                            <th>Telefon</th>
+                            <th>Mail</th>
+                            <th>Opis</th>
+                            <th>Stan</th>
+                            <th>Agent</th>
+                            <th>Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% sprawy.forEach(sprawa => { %>
+                            <tr>
+                                <form action="/sprawa/edytuj/<%= sprawa.Id_sprawa %>" method="POST">
+                                    <td>
+                                        <%= sprawa.Id_sprawa %>
+                                    </td>
+                                    <td><input name="Imie" value="<%= sprawa.Imie %>" /></td>
+                                    <td><input name="Nazwisko" value="<%= sprawa.Nazwisko %>" /></td>
+                                    <td>
+                                        <select name="Id_kategoria">
+                                        <% categories.forEach(cat => { %>
+                                            <option value="<%= cat.Id_kategoria %>" 
+                                                <%= cat.Id_kategoria === sprawa.Id_kategoria ? "selected" : "" %> >
+                                                <%= cat.Nazwa %>
+                                            </option>
+                                        <% }) %>
+                                    </select>
+                                    </td>
+                                    <td><input name="Adres" value="<%= sprawa.Adres %>" /></td>
+                                    <td><input name="Telefon" value="<%= sprawa.Telefon %>" /></td>
+                                    <td><input name="Mail" value="<%= sprawa.Mail %>" /></td>
+                                    <td><textarea name="Opis"><%= sprawa.Opis %></textarea></td>
+                                    <td>
+                                        <select name="Stan">
+                                        <option value="Oczekuje" <%= sprawa.Stan === 'Oczekuje' ? 'selected' : '' %>>Oczekuje</option>
+                                        <option value="W trakcie" <%= sprawa.Stan === 'W trakcie' ? 'selected' : '' %>>W trakcie</option>
+                                        <option value="Zamknięta" <%= sprawa.Stan === 'Zamknięta' ? 'selected' : '' %>>Zamknięta</option>
+                                    </select>
+                                    </td>
+                                    <td>
+                                        <select name="Id_agent">
+                                        <option value="">Brak</option>
+                                        <% agents.forEach(agent => { %>
+                                            <option value="<%= agent.Id_agent %>" 
+                                                <%= agent.Id_agent === sprawa.Id_agent ? 'selected' : '' %> >
+                                                <%= agent.Imie %> <%= agent.Nazwisko %>
+                                            </option>
+                                        <% }) %>
+                                    </select>
+                                    </td>
+                                    <td>
+                                        <button type="submit">Zapisz</button>
+                                        <form action="/sprawa/usun/<%= sprawa.Id_sprawa %>" method="POST" style="display:inline;">
+                                            <button type="submit" onclick="return confirm('Na pewno usunąć?')">Usuń</button>
+                                        </form>
+                                        <!-- Dodawanie ticketów -->
+                                        <form action="/sprawa/<%= sprawa.Id_sprawa %>/ticket" method="POST">
+                                            <textarea name="Tresc" placeholder="Wpisz komentarz" required></textarea>
+                                            <button type="submit">Dodaj Ticket</button>
+                                        </form>
+                                        <ul>
+                                            <ul>
+                                                <% if (sprawa.tickets && sprawa.tickets.length > 0) { %>
+                                                    <% sprawa.tickets.forEach(ticket => { %>
+                                                        <li>
+                                                            <%= ticket.Tresc %> -
+                                                                <%= ticket.Data %>
+                                                        </li>
+                                                        <% }); %>
+                                                            <% } else { %>
+                                                                <li>Brak historii ticketów</li>
+                                                                <% } %>
+                                            </ul>
+
+                                        </ul>
+                                    </td>
+                                </form>
+                            </tr>
+                            <% }); %>
+                    </tbody>
+                </table>
                 <% } %>
+    </main>
 </body>
 
 </html>
