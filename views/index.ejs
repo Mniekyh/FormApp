@@ -4,170 +4,161 @@
 <head>
     <meta charset="UTF-8">
     <title>Panel użytkownika</title>
-    <link rel="stylesheet" href="/style.css">
+    <!-- <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        
+        .sprawa {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .ticket {
+            background: #f4f4f4;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        
+        .zalaczniki img {
+            max-width: 150px;
+            max-height: 150px;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .zalacznik-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px 0;
+        }
+    </style> -->
+    <link href="/style.css" rel="stylesheet">
+
+
 </head>
 
 <body>
-    <header>
-        <h1>Witaj,
-            <%= user.imie %>
+    <h1>Witaj,
+        <%= user.imie %>
+            <%= user.id %>
                 <%= user.nazwisko %>!</h1>
-        <p>Rola:
-            <%= user.rola %>
-        </p>
-        <form action="/logout" method="POST" style="display:inline;">
-            <button type="submit">Wyloguj się</button>
-        </form>
-    </header>
+    <form action="/logout" method="POST">
+        <button type="submit" class="btn">Wyloguj</button>
+    </form>
+    <% if (user && user.rola === 'agent') { %>
+        <a href="/panel-agent" class="btn-link">Panel Agenta</a>
+        <% } %>
 
-    <main>
-        <% if (user.rola === 'ubezpieczony') { %>
-            <h2>Twoje zgłoszenia</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Imię i nazwisko</th>
-                        <th>Adres</th>
-                        <th>Telefon</th>
-                        <th>Mail</th>
-                        <th>Opis</th>
-                        <th>Stan</th>
-                        <th>Przydzielony agent</th>
-                    </tr>
-                </thead>
-                <tbody>
+
+            <h2>Twoje sprawy</h2>
+
+            <% if (user.rola === 'ubezpieczony') { %>
+                <form action="/zgloszenie" method="POST">
+                    <h3>Nowe zgłoszenie</h3>
+                    <input type="text" name="Imie" placeholder="Imię" required>
+                    <input type="text" name="Nazwisko" placeholder="Nazwisko" required>
+                    <input type="text" name="Adres" placeholder="Adres" required>
+                    <input type="text" name="Telefon" placeholder="Telefon" required>
+                    <input type="email" name="Mail" placeholder="Email" required>
+                    <textarea name="Opis" placeholder="Opis zgłoszenia" required></textarea>
+                    <button type="submit" class="btn">Zgłoś</button>
+                </form>
+                <% } %>
+
                     <% sprawy.forEach(sprawa => { %>
-                        <tr>
-                            <td>
+                        <div class="sprawa">
+                            <h3>Sprawa ID:
+                                <%= sprawa.Id_sprawa %>
+                            </h3>
+                            <p><strong>Imię i nazwisko:</strong>
                                 <%= sprawa.Imie %>
                                     <%= sprawa.Nazwisko %>
-                            </td>
-                            <td>
-                                <%= sprawa.Adres %>
-                            </td>
-                            <td>
-                                <%= sprawa.Telefon %>
-                            </td>
-                            <td>
-                                <%= sprawa.Mail %>
-                            </td>
-                            <td>
-                                <%= sprawa.Opis %>
-                            </td>
-                            <td>
+                            </p>
+                            <p><strong>Status:</strong>
                                 <%= sprawa.Stan %>
-                            </td>
-                            <td>
-                                <% let agent = agents.find(a => a.Id_agent === sprawa.Id_agent); %>
-                                    <%= agent ? agent.Imie + ' ' + agent.Nazwisko : 'Nieprzydzielony' %>
-                            </td>
-                        </tr>
-                        <% }); %>
-                </tbody>
-            </table>
+                            </p>
+                            <p><strong>Opis:</strong>
+                                <%= sprawa.Opis %>
+                            </p>
 
-            <h2>Zgłoś nową sprawę</h2>
-            <form action="/zgloszenie" method="POST">
-                <input type="text" name="Imie" placeholder="Imię" required>
-                <input type="text" name="Nazwisko" placeholder="Nazwisko" required>
-                <input type="text" name="Adres" placeholder="Adres" required>
-                <input type="text" name="Telefon" placeholder="Telefon" required>
-                <input type="email" name="Mail" placeholder="Email" required>
-                <textarea name="Opis" placeholder="Opis zgłoszenia" required></textarea>
-                <button type="submit">Zgłoś</button>
-            </form>
-            <% } else if (user.rola === 'ubezpieczyciel') { %>
-                <h2>Wszystkie zgłoszenia</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Imię</th>
-                            <th>Nazwisko</th>
-                            <th>Kategoria</th>
-                            <th>Adres</th>
-                            <th>Telefon</th>
-                            <th>Mail</th>
-                            <th>Opis</th>
-                            <th>Stan</th>
-                            <th>Agent</th>
-                            <th>Akcje</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% sprawy.forEach(sprawa => { %>
-                            <tr>
-                                <form action="/sprawa/edytuj/<%= sprawa.Id_sprawa %>" method="POST">
-                                    <td>
-                                        <%= sprawa.Id_sprawa %>
-                                    </td>
-                                    <td><input name="Imie" value="<%= sprawa.Imie %>" /></td>
-                                    <td><input name="Nazwisko" value="<%= sprawa.Nazwisko %>" /></td>
-                                    <td>
-                                        <select name="Id_kategoria">
-                                        <% categories.forEach(cat => { %>
-                                            <option value="<%= cat.Id_kategoria %>" 
-                                                <%= cat.Id_kategoria === sprawa.Id_kategoria ? "selected" : "" %> >
-                                                <%= cat.Nazwa %>
-                                            </option>
-                                        <% }) %>
-                                    </select>
-                                    </td>
-                                    <td><input name="Adres" value="<%= sprawa.Adres %>" /></td>
-                                    <td><input name="Telefon" value="<%= sprawa.Telefon %>" /></td>
-                                    <td><input name="Mail" value="<%= sprawa.Mail %>" /></td>
-                                    <td><textarea name="Opis"><%= sprawa.Opis %></textarea></td>
-                                    <td>
-                                        <select name="Stan">
-                                        <option value="Oczekuje" <%= sprawa.Stan === 'Oczekuje' ? 'selected' : '' %>>Oczekuje</option>
-                                        <option value="W trakcie" <%= sprawa.Stan === 'W trakcie' ? 'selected' : '' %>>W trakcie</option>
-                                        <option value="Zamknięta" <%= sprawa.Stan === 'Zamknięta' ? 'selected' : '' %>>Zamknięta</option>
-                                    </select>
-                                    </td>
-                                    <td>
-                                        <select name="Id_agent">
-                                        <option value="">Brak</option>
-                                        <% agents.forEach(agent => { %>
-                                            <option value="<%= agent.Id_agent %>" 
-                                                <%= agent.Id_agent === sprawa.Id_agent ? 'selected' : '' %> >
-                                                <%= agent.Imie %> <%= agent.Nazwisko %>
-                                            </option>
-                                        <% }) %>
-                                    </select>
-                                    </td>
-                                    <td>
-                                        <button type="submit">Zapisz</button>
-                                        <form action="/sprawa/usun/<%= sprawa.Id_sprawa %>" method="POST" style="display:inline;">
-                                            <button type="submit" onclick="return confirm('Na pewno usunąć?')">Usuń</button>
-                                        </form>
-                                        <!-- Dodawanie ticketów -->
-                                        <form action="/sprawa/<%= sprawa.Id_sprawa %>/ticket" method="POST">
-                                            <textarea name="Tresc" placeholder="Wpisz komentarz" required></textarea>
-                                            <button type="submit">Dodaj Ticket</button>
-                                        </form>
-                                        <ul>
-                                            <ul>
-                                                <% if (sprawa.tickets && sprawa.tickets.length > 0) { %>
-                                                    <% sprawa.tickets.forEach(ticket => { %>
-                                                        <li>
-                                                            <%= ticket.Tresc %> -
-                                                                <%= ticket.Data %>
-                                                        </li>
-                                                        <% }); %>
-                                                            <% } else { %>
-                                                                <li>Brak historii ticketów</li>
-                                                                <% } %>
-                                            </ul>
+                            <% if (sprawa.tickets && sprawa.tickets.length) { %>
+                                <h4>Historia:</h4>
+                                <% sprawa.tickets.forEach(ticket => { %>
+                                    <div class="ticket">
+                                        <strong><%= ticket.Autor %></strong> [
+                                        <%= ticket.Data %>]:
+                                            <%= ticket.Tresc %>
+                                                <% if (ticket.Typ) { %><em>(<%= ticket.Typ %>)</em>
+                                                    <% } %>
+                                    </div>
+                                    <% }) %>
+                                        <% } %>
 
-                                        </ul>
-                                    </td>
-                                </form>
-                            </tr>
-                            <% }); %>
-                    </tbody>
-                </table>
-                <% } %>
-    </main>
+                                            <% if (user.rola === 'ubezpieczyciel' ) { %>
+                                                <form action="/sprawa/<%= sprawa.Id_sprawa %>/ticket" method="POST">
+                                                    <textarea name="Tresc" placeholder="Dodaj notatkę..." required></textarea>
+                                                    <button type="submit" class="btn">Dodaj ticket</button>
+                                                </form>
+
+                                                <form action="/sprawa/edytuj/<%= sprawa.Id_sprawa %>" method="POST">
+                                                    <h4>Edycja sprawy</h4>
+                                                    <input type="text" name="Imie" value="<%= sprawa.Imie %>" required>
+                                                    <input type="text" name="Nazwisko" value="<%= sprawa.Nazwisko %>" required>
+                                                    <input type="text" name="Id_kategoria" placeholder="Kategoria (ID)" value="<%= sprawa.Id_kategoria %>">
+                                                    <input type="text" name="Adres" value="<%= sprawa.Adres %>" required>
+                                                    <input type="text" name="Telefon" value="<%= sprawa.Telefon %>" required>
+                                                    <input type="email" name="Mail" value="<%= sprawa.Mail %>" required>
+                                                    <textarea name="Opis"><%= sprawa.Opis %></textarea>
+                                                    <input type="text" name="Stan" value="<%= sprawa.Stan %>" required>
+                                                    <input type="text" name="Id_agent" placeholder="Agent (ID)" value="<%= sprawa.Id_agent %>">
+                                                    <button type="submit" class="btn">Zapisz zmiany</button>
+                                                </form>
+
+                                                <form action="/sprawa/usun/<%= sprawa.Id_sprawa %>" method="POST">
+                                                    <button type="submit" class="btn" onclick="return confirm('Na pewno chcesz usunąć sprawę?')">Usuń sprawę</button>
+                                                </form>
+
+                                                <form action="/sprawa/<%= sprawa.Id_sprawa %>/upload" method="POST" enctype="multipart/form-data">
+                                                    <input type="file" name="zalacznik" required>
+                                                    <button type="submit" class="btn">Wyślij załącznik</button>
+                                                </form>
+                                                <% } %>
+
+                                                    <% if (Array.isArray(sprawa.zalaczniki) && sprawa.zalaczniki.length > 0) { %>
+
+
+                                                        <div class="zalaczniki">
+                                                            <h4>Załączniki:</h4>
+                                                            <ul>
+                                                                <% sprawa.zalaczniki.forEach(z => { %>
+                                                                    <li class="zalacznik-link">
+                                                                        <% if (z && z.nazwa_pliku && z.nazwa_pliku.match(/\.(jpg|jpeg|png|gif)$/i)) { %>
+
+
+                                                                            <img src="/uploads/<%= z.Nazwa_pliku %>" alt="obraz">
+                                                                            <% } else if (z && z.Nazwa_pliku && z.Nazwa_pliku.match(/\.(pdf)$/i)) { %>
+                                                                                <img src="/uploads/<%= z.Nazwa_pliku %>" /> 📄 <a href="/uploads/<%= z.Nazwa_pliku %>" target="_blank">PDF: <%= z.Nazwa_pliku %></a>
+                                                                                <% } else { %>
+                                                                                    📎
+                                                                                    <a href="/uploads/<%= z.Nazwa_pliku %>" target="_blank">
+                                                                                <img src="/uploads/<%= z.Nazwa_pliku %>"/>
+                                                                                <%= z.Nazwa_pliku %>
+                                                                            </a>
+                                                                                    <% } %>
+                                                                                        <form method="POST" action="/zalacznik/usun/<%= z.Id_zalacznik %>" style="display:inline;">
+                                                                                            <button type="submit" class="btn">🗑 Usuń</button>
+                                                                                        </form>
+                                                                    </li>
+                                                                    <% }) %>
+                                                            </ul>
+                                                        </div>
+                                                        <% } %>
+                        </div>
+                        <% }) %>
 </body>
 
 </html>

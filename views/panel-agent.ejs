@@ -1,0 +1,137 @@
+<!-- views/panel_agent.ejs -->
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Agenta</title>
+    <link href="/style.css" rel="stylesheet">
+
+</head>
+
+<body>
+    <header>
+        <h1>Witaj,
+            <%= user.imie %>!</h1>
+        <a href="/logout">Wyloguj się</a>
+    </header>
+
+    <main>
+
+
+
+
+
+        <h2>Twoje przypisane sprawy</h2>
+
+        <% if (sprawy.length === 0) { %>
+            <p>Brak przypisanych spraw.</p>
+            <% } else { %>
+                <% sprawy.forEach(sprawa => { %>
+                    <h2>Ticket dla sprawy
+                        <%= sprawa.Id_sprawa %>
+                    </h2>
+                    <!-- Formularz dodawania nowego ticketa -->
+                    <h3>Dodaj nowy ticket</h3>
+                    <form action="/agent/sprawa/<%= sprawa.Id_sprawa %>/ticket" method="POST">
+                        <label for="Tresc">Treść ticketa:</label>
+                        <textarea name="Tresc" required></textarea><br>
+
+                        <label for="Typ">Typ ticketa:</label>
+                        <select name="Typ" required>
+                <option value="Zapytanie">Zapytanie</option>
+                <option value="Uwagi">Uwagi</option>
+                <option value="Zmiana">Zmiana</option>
+            </select><br>
+
+                        <button type="submit">Dodaj ticket</button>
+                    </form>
+                    <div class="sprawa">
+                        <h3>Sprawa #
+                            <%= sprawa.Id_sprawa %>:
+                                <%= sprawa.Imie %>
+                                    <%= sprawa.Nazwisko %>
+                        </h3>
+                        <p><strong>Status:</strong>
+                            <%= sprawa.Stan %>
+                        </p>
+                        <p><strong>Opis:</strong>
+                            <%= sprawa.Opis %>
+                        </p>
+
+                        <form action="/agent/sprawa/<%= sprawa.Id_sprawa %>/aktualizuj" method="POST">
+                            <label for="status">Zmień status:</label>
+                            <select name="Stan">
+                            <option value="Oczekuje" <%= sprawa.Stan === 'Oczekuje' ? 'selected' : '' %>>Oczekuje</option>
+                            <option value="W trakcie" <%= sprawa.Stan === 'W trakcie' ? 'selected' : '' %>>W trakcie</option>
+                            <option value="Zamknięta" <%= sprawa.Stan === 'Zamknięta' ? 'selected' : '' %>>Zamknięta</option>
+                        </select>
+
+
+
+                            <button type="submit">Aktualizuj</button>
+                        </form>
+                    </div>
+
+                    <form action="/sprawa/usun/<%= sprawa.Id_sprawa %>" method="POST">
+                        <button type="submit" class="btn" onclick="return confirm('Na pewno chcesz usunąć sprawę?')">Usuń sprawę</button>
+                    </form>
+
+                    <form action="/sprawa/<%= sprawa.Id_sprawa %>/upload" method="POST" enctype="multipart/form-data">
+                        <input type="file" name="zalacznik" required>
+                        <button type="submit" class="btn">Wyślij załącznik</button>
+                    </form>
+
+                    <h4>Załączniki:</h4>
+                    <% if (Array.isArray(sprawa.zalaczniki) && sprawa.zalaczniki.length > 0) { %>
+
+
+                        <div class="zalaczniki">
+                            <h4>Załączniki:</h4>
+                            <ul>
+                                <% sprawa.zalaczniki.forEach(z => { %>
+                                    <li class="zalacznik-link">
+                                        <% if (z && z.nazwa_pliku && z.nazwa_pliku.match(/\.(jpg|jpeg|png|gif)$/i)) { %>
+
+
+                                            <img src="/uploads/<%= z.Nazwa_pliku %>" alt="obraz">
+                                            <% } else if (z && z.Nazwa_pliku && z.Nazwa_pliku.match(/\.(pdf)$/i)) { %>
+                                                <img src="/uploads/<%= z.Nazwa_pliku %>" /> 📄 <a href="/uploads/<%= z.Nazwa_pliku %>" target="_blank">PDF: <%= z.Nazwa_pliku %></a>
+                                                <% } else { %>
+                                                    📎
+                                                    <a href="/uploads/<%= z.Nazwa_pliku %>" target="_blank">
+                                                    <img src="/uploads/<%= z.Nazwa_pliku %>"/>
+                                                    <%= z.Nazwa_pliku %>
+                                                </a>
+                                                    <% } %>
+                                                        <form method="POST" action="/zalacznik/usun/<%= z.Id_zalacznik %>" style="display:inline;">
+                                                            <button type="submit" class="btn">🗑 Usuń</button>
+                                                        </form>
+                                    </li>
+                                    <% }) %>
+                            </ul>
+                        </div>
+                        <% } %>
+                            <!-- Wyświetlanie ticketów -->
+                            <div>
+                                <h3>Lista ticketów:</h3>
+                                <ul>
+                                    <% sprawa.tickets.forEach(ticket => { %>
+                                        <li>
+                                            <strong><%= ticket.Typ %> - <%= ticket.Data %></strong>
+                                            <p>
+                                                <%= ticket.Tresc %>
+                                            </p>
+                                        </li>
+                                        <% }) %>
+                                </ul>
+                            </div>
+
+
+
+                            <% }) %>
+                                <% } %>
+    </main>
+</body>
+
+</html>

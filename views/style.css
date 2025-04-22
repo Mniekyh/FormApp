@@ -1,0 +1,101 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #216fbd;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background-color: #003366;
+    color: white;
+    padding: 1rem;
+    text-align: center;
+}
+
+main {
+    padding: 2rem;
+}
+
+h1,
+h2 {
+    color: #003366;
+}
+
+.card {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+input,
+textarea,
+select,
+button {
+    display: block;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    width: 100%;
+    max-width: 500px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+    background-color: #003366;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0055a5;
+}
+
+.form-inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.form-inline input {
+    flex: 1;
+}
+
+.actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+th,
+td {
+    border: 1px solid #ccc;
+    padding: 0.5rem;
+    text-align: left;
+}
+
+th {
+    background-color: #e6e6e6;
+}
+
+.hidden {
+    display: none;
+}
+
+.edit-row td {
+    background-color: #f9f9f9;
+}
+
+button i {
+    pointer-events: none;
+    /* pozwala kliknąć ikonę jako przycisk */
+}

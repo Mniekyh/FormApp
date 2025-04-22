@@ -1,101 +1,151 @@
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f6f8;
-    color: #333;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
-    padding: 0;
-}
-
-header {
-    background-color: #003366;
-    color: white;
-    padding: 1rem;
-    text-align: center;
-}
-
-main {
-    padding: 2rem;
+    padding: 20px;
+    background-color: #f5f7fa;
+    color: #333;
 }
 
 h1,
-h2 {
-    color: #003366;
+h2,
+h3 {
+    color: #2c3e50;
 }
 
-.card {
-    background: white;
+.container {
+    max-width: 1200px;
+    margin: auto;
+}
+
+.sprawa {
+    background-color: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(65, 143, 212, 0.662);
+    padding: 20px;
+    margin-bottom: 30px;
+    transition: transform 0.2s ease-in-out;
+}
+
+.sprawa:hover {
+    transform: scale(1.01);
+}
+
+.sprawa h2 {
+    margin-top: 0;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 8px;
+}
+
+.tickets {
+    background-color: #f0f4f8;
     border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    margin-top: 15px;
 }
 
-input,
-textarea,
-select,
-button {
-    display: block;
-    margin-bottom: 0.5rem;
-    padding: 0.5rem;
-    width: 100%;
-    max-width: 500px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+.ticket {
+    border-bottom: 1px solid #28358a;
+    padding: 8px 0;
 }
 
-button {
-    background-color: #003366;
-    color: white;
-    border: none;
-    cursor: pointer;
+.ticket:last-child {
+    border-bottom: none;
 }
 
-button:hover {
-    background-color: #0055a5;
+.ticket .autor {
+    font-weight: bold;
+    color: #3498db;
 }
 
-.form-inline {
+.zalaczniki {
+    list-style: none;
+    padding-left: 0;
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    align-items: center;
+    gap: 10px;
 }
 
-.form-inline input {
-    flex: 1;
+.zalacznik-link {
+    background: #eaeaea;
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 14px;
 }
 
-.actions {
-    display: flex;
-    gap: 0.5rem;
+.zalacznik-link img {
+    max-width: 100px;
+    max-height: 100px;
+    display: block;
+    border-radius: 6px;
 }
 
-table {
+.btn {
+    background-color: #3498db;
+    border: none;
+    padding: 10px 16px;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.btn:hover {
+    background-color: #2980b9;
+}
+
+form {
+    margin-top: 20px;
+}
+
+input[type="text"],
+textarea,
+select {
     width: 100%;
-    border-collapse: collapse;
-    margin-top: 1rem;
+    padding: 8px;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    border: 1px solid #3a2dac;
 }
 
-th,
-td {
-    border: 1px solid #ccc;
-    padding: 0.5rem;
-    text-align: left;
+.btn {
+    background-color: #2e77a8;
+    color: white;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+    text-decoration: none;
+    display: inline-block;
 }
 
-th {
-    background-color: #e6e6e6;
+.btn:hover {
+    background-color: #2954b9a1;
+    transform: translateY(-2px);
 }
 
-.hidden {
-    display: none;
+.btn-danger {
+    background-color: #e74c3c;
 }
 
-.edit-row td {
-    background-color: #f9f9f9;
+.btn-danger:hover {
+    background-color: #c0392b;
 }
 
-button i {
-    pointer-events: none;
-    /* pozwala kliknąć ikonę jako przycisk */
+.btn-success {
+    background-color: #2ecc71;
+}
+
+.btn-success:hover {
+    background-color: #27ae60;
+}
+
+.btn-secondary {
+    background-color: #95a5a6;
+}
+
+.btn-secondary:hover {
+    background-color: #7f8c8d;
 }
