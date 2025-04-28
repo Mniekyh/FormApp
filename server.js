@@ -23,6 +23,11 @@ const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
 
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
+
+
 
 // Ustaw klucze VAPID (musisz je wcześniej wygenerować)
 webpush.setVapidDetails(
@@ -85,16 +90,7 @@ app.use(session({
     cookie: { maxAge: 1000 * 60 * 60 * 24 } // Sesja trwa 24 godziny
 }));
 
-//nodemailer
-const transporter = nodemailer.createTransport({
-    host: 'smtp.poczta.o2.pl',
-    port: 465, // albo 587 jeśli chcesz TLS bez SSL
-    secure: true, // true dla portu 465, false dla 587
-    auth: {
-        user: 'naughtylius@o2.pl',
-        pass: 'Naughty123'
-    }
-});
+
 //nodeKey
 webpush.setVapidDetails(
     'mailto:anvil.Smithy@gmail.com',
@@ -102,63 +98,9 @@ webpush.setVapidDetails(
     'T_d3pq4VZoxpOfrwvHK-sMYppAz_BbASRJVR2kAQ0Uw'
 );
 
-//API Subscribe 4 email
-app.post('/api/subscribe', (req, res) => {
-    const sub = req.body;
-    if (!req.session || !req.session.user) {
-        console.log("Brak sesji użytkownika");
-        return res.status(401).json({ error: 'Brak użytkownika' });
-    }
 
-    const userId = req.session.user.id;
 
-    console.log("Zapisuję subskrypcję dla userId:", userId);
-    console.log("Dane subskrypcji:", JSON.stringify(sub));
 
-    const stmt = db.prepare("UPDATE Uzytkownik SET push_subscription = ? WHERE id = ?");
-    const result = stmt.run(JSON.stringify(sub), userId);
-
-    console.log("Wynik zapisu:", result);
-
-    res.status(201).json({ message: 'Zapisano subskrypcję push' });
-});
-
-app.post('/sprawa/:id/update', (req, res) => {
-    const { id } = req.params;
-    const { nowyStatus } = req.body;
-
-    db.run('UPDATE Sprawy SET status = ? WHERE id = ?', [nowyStatus, id], function(err) {
-        if (err) {
-            console.error('❌ Błąd przy aktualizacji sprawy:', err);
-            return res.status(500).send('Błąd serwera');
-        }
-
-        // 1. Pobieramy wszystkie subskrypcje push
-        db.all('SELECT push_subscription FROM Uzytkownik WHERE push_subscription IS NOT NULL', [], (err, rows) => {
-            if (err) {
-                console.error('❌ Błąd przy pobieraniu subskrypcji:', err);
-                return res.status(500).send('Błąd przy pobieraniu subskrypcji');
-            }
-
-            // 2. Wysyłamy powiadomienia
-            rows.forEach(row => {
-                try {
-                    const subscription = JSON.parse(row.push_subscription);
-
-                    sendPushNotification(subscription, {
-                        title: 'Zmiana sprawy!',
-                        body: `Sprawa o ID ${id} zmieniła status na: ${nowyStatus}`,
-                        icon: '/icons/notification-icon.png'
-                    });
-                } catch (e) {
-                    console.error('❌ Błąd przy parsowaniu subskrypcji:', e);
-                }
-            });
-
-            res.send('✅ Sprawa zaktualizowana i powiadomienia wysłane');
-        });
-    });
-});
 
 
 
@@ -169,15 +111,14 @@ function isLoggedIn(req) {
 
 // Multer - konfiguracja uploadów
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
+    destination: function(req, file, cb) {
+        cb(null, './uploads/'); // Upewnij się, że masz katalog "uploads"
     },
-    filename: (req, file, cb) => {
-        const uniqueName = Date.now() + '-' + file.originalname;
-        cb(null, uniqueName);
+    filename: function(req, file, cb) {
+        cb(null, Date.now() + path.extname(file.originalname)); // np. 1712344323.pdf
     }
 });
-const upload = multer({ storage });
+const upload = multer({ storage: storage });
 
 // Tworzenie tabel, jeśli nie istnieją
 db.run(`
@@ -333,9 +274,16 @@ app.post('/login', async(req, res) => {
 // });
 
 
-app.get('/logout', (req, res) => {
-    req.session.destroy(() => res.redirect('/login'));
+app.post('/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('Błąd przy wylogowaniu:', err);
+            return res.status(500).send('Błąd przy wylogowaniu');
+        }
+        res.redirect('/login');
+    });
 });
+
 
 app.post('/logout', (req, res) => {
     req.session.destroy(err => {
@@ -408,6 +356,38 @@ app.get('/', (req, res) => {
     });
 });
 
+// Strona pojedynczej sprawy
+app.get('/sprawa/:id', (req, res) => {
+    if (!isLoggedIn(req)) return res.redirect('/login');
+
+    const id = req.params.id;
+    db.get('SELECT * FROM Sprawa WHERE Id_sprawa = ?', [id], (err, sprawa) => {
+        if (err) return res.status(500).send('Błąd serwera');
+        if (!sprawa) return res.status(404).send('Nie znaleziono sprawy');
+
+        // Pobieramy też tickety i załączniki do tej sprawy
+        db.all(`
+            SELECT Ticket.*, Uzytkownik.imie || ' ' || Uzytkownik.nazwisko AS Autor
+            FROM Ticket
+            LEFT JOIN Uzytkownik ON Ticket.Id_uzytkownik = Uzytkownik.id
+            WHERE Ticket.Id_sprawa = ?
+            ORDER BY Ticket.Data DESC
+        `, [id], (err, tickets) => {
+            if (err) return res.status(500).send('Błąd serwera przy ładowaniu ticketów');
+
+            db.all('SELECT * FROM Zalacznik WHERE Id_sprawa = ?', [id], (err, zalaczniki) => {
+                if (err) return res.status(500).send('Błąd serwera przy ładowaniu załączników');
+
+                res.render('sprawa', {
+                    user: req.session.user,
+                    sprawa,
+                    tickets,
+                    zalaczniki
+                });
+            });
+        });
+    });
+});
 
 
 // Dodanie zgłoszenia
@@ -427,17 +407,53 @@ app.post('/zgloszenie', (req, res) => {
     });
 });
 
-// Usuwanie sprawy
-app.post('/sprawa/usun/:id', (req, res) => {
-    if (!isLoggedIn(req) || req.session.user.rola !== 'ubezpieczyciel') {
-        return res.status(403).send('Brak uprawnień');
+//usuwanie sprawy
+
+app.post('/sprawa/:id/usun', (req, res) => {
+    if (!isLoggedIn(req)) return res.redirect('/login');
+
+    const user = req.session.user;
+    const { id } = req.params;
+
+    if (user.rola === 'ubezpieczony') {
+        return res.status(403).send('❌ Brak uprawnień do usuwania spraw.');
     }
 
-    db.run('DELETE FROM Sprawa WHERE Id_sprawa = ?', [req.params.id], err => {
-        if (err) return res.status(500).send("Błąd przy usuwaniu sprawy");
-        res.redirect('/');
+    // Najpierw usuń załączniki
+    db.all('SELECT Nazwa_pliku FROM Zalacznik WHERE Id_sprawa = ?', [id], (err, files) => {
+        if (err) {
+            console.error('Błąd przy pobieraniu załączników:', err);
+            return res.status(500).send('Błąd serwera.');
+        }
+
+        for (const file of files) {
+            const filePath = path.join(__dirname, 'uploads', file.Nazwa_pliku);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+
+        // Usuń rekordy z Zalacznik i Ticket
+        db.run('DELETE FROM Zalacznik WHERE Id_sprawa = ?', [id], (err) => {
+            if (err) console.error('Błąd przy usuwaniu załączników:', err);
+
+            db.run('DELETE FROM Ticket WHERE Id_sprawa = ?', [id], (err) => {
+                if (err) console.error('Błąd przy usuwaniu ticketów:', err);
+
+                // Na końcu usuń sprawę
+                db.run('DELETE FROM Sprawa WHERE Id_sprawa = ?', [id], (err) => {
+                    if (err) {
+                        console.error('Błąd przy usuwaniu sprawy:', err);
+                        return res.status(500).send('Błąd serwera przy usuwaniu sprawy.');
+                    }
+
+                    res.redirect('/');
+                });
+            });
+        });
     });
 });
+
 
 // Edycja sprawy
 app.post('/sprawa/edytuj/:id', (req, res) => {
@@ -481,52 +497,78 @@ app.post('/sprawa/edytuj/:id', (req, res) => {
     });
 });
 
-// Dodanie ticketa
-app.post('/sprawa/:id/ticket', (req, res) => {
-    if (!isLoggedIn(req) || req.session.user.rola !== 'ubezpieczyciel') {
-        return res.status(403).send('Brak uprawnień');
-    }
-
-    const { Tresc } = req.body;
-    db.run(`
-        INSERT INTO Ticket (Id_sprawa, Id_uzytkownik, Tresc) 
-        VALUES (?, ?, ?)
-    `, [req.params.id, req.session.user.id, Tresc], err => {
-        if (err) return res.status(500).send("Błąd przy dodawaniu ticketa");
-        res.redirect('/');
-    });
-});
-
-// Upload załącznika
-app.post('/sprawa/:id/upload', upload.single('zalacznik'), (req, res) => {
+// Wysyłanie nowej wiadomości (ticket)
+app.post('/sprawa/:id/wiadomosc', (req, res) => {
     if (!isLoggedIn(req)) return res.redirect('/login');
-    if (!req.file) return res.status(400).send('Nie wybrano pliku');
 
-    db.run(`
-        INSERT INTO Zalacznik (Id_sprawa, Nazwa_pliku)
-        VALUES (?, ?)
-    `, [req.params.id, req.file.filename], err => {
-        if (err) return res.status(500).send('Błąd przy dodawaniu załącznika');
-        res.redirect('/');
-    });
+    const idSprawa = req.params.id;
+    const { tresc } = req.body;
+    const idUzytkownik = req.session.user.id;
+
+    db.run('INSERT INTO Ticket (Id_sprawa, Id_uzytkownik, Tresc, Data) VALUES (?, ?, ?, ?)', [idSprawa, idUzytkownik, tresc, new Date().toISOString()],
+        (err) => {
+            if (err) return res.status(500).send('Błąd przy dodawaniu wiadomości');
+            res.redirect('/sprawa/' + idSprawa);
+        });
 });
+
+
+// Wgrywanie załącznika
+app.post('/sprawa/:id/zalacznik', upload.single('zalacznik'), (req, res) => {
+    if (!isLoggedIn(req)) return res.redirect('/login');
+
+    const idSprawa = req.params.id;
+    const file = req.file;
+    if (!file) return res.status(400).send('Brak pliku');
+
+    db.run('INSERT INTO Zalacznik (Id_sprawa, Nazwa_pliku, Sciezka) VALUES (?, ?, ?)', [idSprawa, file.originalname, file.filename],
+        (err) => {
+            if (err) {
+                console.error(err); // <-- Dodaj to żeby widzieć szczegóły błędu w konsoli
+                return res.status(500).send('Błąd przy dodawaniu załącznika');
+            }
+            res.redirect('/sprawa/' + idSprawa);
+        });
+});
+
+
 
 // Usuwanie załącznika
-app.post('/zalacznik/usun/:id', (req, res) => {
+app.post('/sprawa/:id/usun-zalacznik/:zalacznikId', (req, res) => {
     if (!isLoggedIn(req)) return res.redirect('/login');
 
-    db.get('SELECT * FROM Zalacznik WHERE Id_zalacznik = ?', [req.params.id], (err, zalacznik) => {
-        if (err || !zalacznik) return res.status(500).send('Załącznik nie istnieje');
+    const { id, zalacznikId } = req.params;
+
+    db.get('SELECT Nazwa_pliku FROM Zalacznik WHERE Id_zalacznik = ?', [zalacznikId], (err, zalacznik) => {
+        if (err) {
+            console.error('Błąd przy pobieraniu pliku:', err);
+            return res.status(500).send('Błąd serwera przy pobieraniu załącznika');
+        }
+
+        if (!zalacznik) {
+            console.warn('Załącznik nie istnieje w bazie.');
+            return res.redirect('/sprawa/' + id); // Po prostu wróć bez błędu
+        }
 
         const filePath = path.join(__dirname, 'uploads', zalacznik.Nazwa_pliku);
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
-        db.run('DELETE FROM Zalacznik WHERE Id_zalacznik = ?', [req.params.id], err => {
-            if (err) return res.status(500).send('Błąd przy usuwaniu załącznika');
-            res.redirect('/');
+        fs.unlink(filePath, (err) => {
+            if (err && err.code !== 'ENOENT') {
+                console.warn('Błąd przy usuwaniu pliku:', err.message);
+            }
+
+            db.run('DELETE FROM Zalacznik WHERE Id_zalacznik = ?', [zalacznikId], (err) => {
+                if (err) {
+                    console.error('Błąd przy usuwaniu z bazy:', err);
+                    return res.status(500).send('Błąd serwera przy usuwaniu załącznika');
+                }
+                res.redirect('/sprawa/' + id);
+            });
         });
     });
 });
+
+
 
 
 //AGENT
@@ -621,37 +663,40 @@ app.post('/agent/sprawa/:id/ticket', (req, res) => {
     });
 });
 
-
 // Zmiana stanu sprawy
+app.post('/sprawa/:id/zmien-stan', (req, res) => {
+    if (!isLoggedIn(req)) return res.redirect('/login');
 
-app.post('/agent/sprawa/:id/aktualizuj', async(req, res) => {
-    if (!isLoggedIn(req) || req.session.user.rola !== 'agent') {
-        return res.status(403).send('Brak dostępu');
+    const user = req.session.user;
+    const { id } = req.params;
+    const { nowy_stan, komentarz } = req.body;
+
+    if (user.rola === 'ubezpieczony') {
+        return res.status(403).send('❌ Brak uprawnień do zmiany stanu sprawy.');
     }
 
-    const agentId = req.session.user.id;
-    const sprawaId = req.params.id;
-    const { Stan } = req.body; // Odczytujemy 'Stan' z formularza
-
-    try {
-        // Sprawdzenie, czy sprawa należy do danego agenta
-        const sprawa = await db.get("SELECT * FROM Sprawa WHERE Id_sprawa = ? AND Id_agent = ?", [sprawaId, agentId]);
-
-        if (!sprawa) {
-            return res.status(404).send('Sprawa nie znaleziona');
+    db.run('UPDATE Sprawa SET Stan = ? WHERE Id_sprawa = ?', [nowy_stan, id], (err) => {
+        if (err) {
+            console.error('Błąd przy aktualizacji stanu:', err);
+            return res.status(500).send('Błąd serwera przy zmianie stanu');
         }
 
-        // Aktualizowanie statusu sprawy w bazie
-        await db.run("UPDATE Sprawa SET Stan = ? WHERE Id_sprawa = ?", [Stan, sprawaId]);
-
-        // Przekierowanie na stronę szczegółów sprawy
-        res.redirect(`/panel-agent/sprawa/${sprawaId}`);
-
-    } catch (err) {
-        console.error('Błąd podczas aktualizacji:', err);
-        res.status(500).send("Błąd przy aktualizacji statusu sprawy");
-    }
+        if (komentarz && komentarz.trim() !== '') {
+            const data = new Date().toISOString();
+            db.run('INSERT INTO Ticket (Id_sprawa, Id_uzytkownik, Tresc, Data) VALUES (?, ?, ?, ?)', [id, user.id, `Komentarz do zmiany stanu: ${komentarz}`, data], (err) => {
+                if (err) {
+                    console.error('Błąd przy zapisie komentarza:', err);
+                    // nawet jeśli komentarz się nie zapisze, przekieruj użytkownika
+                }
+                res.redirect('/sprawa/' + id);
+            });
+        } else {
+            res.redirect('/sprawa/' + id);
+        }
+    });
 });
+
+
 
 app.get('/panel-agent/sprawa/:id', async(req, res) => {
     if (!isLoggedIn(req) || req.session.user.rola !== 'agent') {

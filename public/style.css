@@ -1,151 +1,115 @@
+/* Ogólne ustawienia */
+
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
-    padding: 20px;
-    background-color: #f5f7fa;
+    padding: 0;
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #74ebd5, #ACB6E5);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+
+/* Kontener formularza */
+
+.container.auth-container {
+    background: white;
+    padding: 40px 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+
+/* Nagłówki */
+
+.container.auth-container h1 {
+    margin-bottom: 25px;
+    font-size: 28px;
     color: #333;
 }
 
-h1,
-h2,
-h3 {
-    color: #2c3e50;
-}
 
-.container {
-    max-width: 1200px;
-    margin: auto;
-}
+/* Formularz */
 
-.sprawa {
-    background-color: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(65, 143, 212, 0.662);
-    padding: 20px;
-    margin-bottom: 30px;
-    transition: transform 0.2s ease-in-out;
-}
-
-.sprawa:hover {
-    transform: scale(1.01);
-}
-
-.sprawa h2 {
-    margin-top: 0;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 8px;
-}
-
-.tickets {
-    background-color: #f0f4f8;
-    border-radius: 8px;
-    padding: 15px;
-    margin-top: 15px;
-}
-
-.ticket {
-    border-bottom: 1px solid #28358a;
-    padding: 8px 0;
-}
-
-.ticket:last-child {
-    border-bottom: none;
-}
-
-.ticket .autor {
-    font-weight: bold;
-    color: #3498db;
-}
-
-.zalaczniki {
-    list-style: none;
-    padding-left: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.zalacznik-link {
-    background: #eaeaea;
-    padding: 5px 10px;
-    border-radius: 8px;
-    font-size: 14px;
-}
-
-.zalacznik-link img {
-    max-width: 100px;
-    max-height: 100px;
-    display: block;
-    border-radius: 6px;
-}
-
-.btn {
-    background-color: #3498db;
-    border: none;
-    padding: 10px 16px;
-    color: white;
-    border-radius: 6px;
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.btn:hover {
-    background-color: #2980b9;
-}
-
-form {
-    margin-top: 20px;
-}
-
-input[type="text"],
-textarea,
-select {
+.auth-form input,
+.auth-form select {
     width: 100%;
-    padding: 8px;
-    margin-top: 5px;
-    margin-bottom: 10px;
-    border-radius: 4px;
-    border: 1px solid #3a2dac;
+    padding: 12px 15px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 16px;
+    transition: 0.3s;
 }
 
-.btn {
-    background-color: #2e77a8;
-    color: white;
-    padding: 10px 18px;
+.auth-form input:focus,
+.auth-form select:focus {
+    border-color: #74ebd5;
+    outline: none;
+}
+
+
+/* Etykiety */
+
+.auth-form label {
+    display: block;
+    margin-top: 15px;
+    font-weight: 600;
+    color: #555;
+    text-align: left;
+}
+
+
+/* Przyciski */
+
+.btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #74ebd5, #ACB6E5);
     border: none;
     border-radius: 8px;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 20px;
     cursor: pointer;
-    font-weight: 600;
-    transition: background-color 0.2s ease, transform 0.15s ease;
+    transition: background 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
+}
+
+
+/* Linki pod formularzem */
+
+.auth-link {
+    margin-top: 20px;
+    font-size: 14px;
+    color: #555;
+}
+
+.auth-link a {
+    color: #007bff;
     text-decoration: none;
-    display: inline-block;
+    font-weight: bold;
 }
 
-.btn:hover {
-    background-color: #2954b9a1;
-    transform: translateY(-2px);
+.auth-link a:hover {
+    text-decoration: underline;
 }
 
-.btn-danger {
-    background-color: #e74c3c;
-}
 
-.btn-danger:hover {
-    background-color: #c0392b;
-}
+/* Responsywność */
 
-.btn-success {
-    background-color: #2ecc71;
-}
-
-.btn-success:hover {
-    background-color: #27ae60;
-}
-
-.btn-secondary {
-    background-color: #95a5a6;
-}
-
-.btn-secondary:hover {
-    background-color: #7f8c8d;
+@media (max-width: 480px) {
+    .container.auth-container {
+        padding: 30px 20px;
+    }
 }

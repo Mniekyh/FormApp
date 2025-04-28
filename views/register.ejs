@@ -3,27 +3,31 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Rejestracja-ENG</title>
+    <title>Rejestracja</title>
+    <link rel="stylesheet" href="/style.css">
 </head>
 
 <body>
-    <h1>Rejestracja</h1>
-    <form action="/register" method="POST">
-        <input type="text" name="imie" placeholder="Imię" required />
-        <input type="text" name="nazwisko" placeholder="Nazwisko" required />
-        <input type="email" name="email" placeholder="Email" required />
-        <input type="password" name="haslo" placeholder="Hasło" required />
+    <div class="container auth-container">
+        <h1>Rejestracja</h1>
+        <form action="/register" method="POST" class="auth-form">
+            <input type="text" name="imie" placeholder="Imię" required />
+            <input type="text" name="nazwisko" placeholder="Nazwisko" required />
+            <input type="email" name="email" placeholder="Email" required />
+            <input type="password" name="haslo" placeholder="Hasło" required />
 
-        <select name="rola" required>
-          <option value="ubezpieczony">Ubezpieczony</option>
-          <option value="ubezpieczyciel">Ubezpieczyciel</option>
+            <select name="rola" required>
+                <option value="" disabled selected>Wybierz rolę</option>
+                <option value="ubezpieczony">Ubezpieczony</option>
+                <option value="ubezpieczyciel">Ubezpieczyciel</option>
+                <option value="agent">Agent</option>
+            </select>
 
-      </select>
+            <button type="submit" class="btn-primary">Zarejestruj się</button>
+        </form>
 
-        <button type="submit">Zarejestruj</button>
-    </form>
-
-    <p><a href="/login">Masz konto? Zaloguj się</a></p>
+        <p class="auth-link">Masz już konto? <a href="/login">Zaloguj się</a></p>
+    </div>
 </body>
 
 </html>

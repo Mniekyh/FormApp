@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Sprawa #
+        <%= sprawa.Id_sprawa %>
+    </title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+    <nav class="bg-blue-600 p-4 text-white flex justify-between">
+        <a href="/" class="font-bold text-xl hover:underline">← Powrót</a>
+        <div>
+            <%= user.imie %>
+                <%= user.nazwisko %> (
+                    <%= user.rola %>)
+
+                        <form action="/logout" method="POST" style="display: inline;">
+                            <button type="submit" class="btn btn-outline-secondary">Wyloguj</button>
+                        </form>
+
+
+
+        </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto py-8 px-4">
+        <h1 class="text-3xl font-bold mb-6">Sprawa #
+            <%= sprawa.Id_sprawa %>
+        </h1>
+        <h4>
+            <% if (user.rola !== 'ubezpieczony') { %>
+                <form action="/sprawa/<%= sprawa.Id_sprawa %>/usun" method="POST" onsubmit="return confirm('Na pewno chcesz usunąć tę sprawę? To działanie jest nieodwracalne!');" class="mt-4">
+                    <button type="submit" class="btn btn-danger">Usuń sprawę</button>
+                </form>
+                <% } %>
+        </h4>
+
+        <div class="bg-white shadow-md rounded-lg p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-2">
+                <%= sprawa.Imie %>
+                    <%= sprawa.Nazwisko %>
+            </h2>
+            <p class="text-gray-600"><strong>Adres:</strong>
+                <%= sprawa.Adres %>
+            </p>
+            <p class="text-gray-600"><strong>Telefon:</strong>
+                <%= sprawa.Telefon %>
+            </p>
+            <p class="text-gray-600"><strong>Mail:</strong>
+                <%= sprawa.Mail %>
+            </p>
+            <p class="text-gray-600 mt-4"><strong>Opis:</strong><br>
+                <%= sprawa.Opis %>
+            </p>
+            <p class="text-gray-600 mt-4"><strong>Stan:</strong>
+                <%= sprawa.Stan %>
+            </p>
+            <p class="text-gray-600"><strong>Agent:</strong>
+                <%= sprawa.Id_agent %>
+            </p>
+            <p class="text-gray-600"><strong>Kategoria:</strong>
+                <%= sprawa.Id_kategoria %>
+            </p>
+        </div>
+
+        <h2 class="text-2xl font-bold mb-4">Historia komunikacji</h2>
+
+        <% if (tickets.length > 0) { %>
+            <div class="space-y-4">
+                <% tickets.forEach(ticket => { %>
+                    <div class="bg-white p-4 rounded shadow">
+                        <p class="text-gray-800 font-semibold">
+                            <%= ticket.Autor %> -
+                                <%= new Date(ticket.Data).toLocaleString('pl-PL') %>
+                        </p>
+                        <p class="text-gray-700 mt-2">
+                            <%= ticket.Tresc %>
+                        </p>
+                    </div>
+                    <% }) %>
+            </div>
+            <% } else { %>
+                <p class="text-gray-500">Brak historii komunikacji.</p>
+                <% } %>
+
+                    <h2 class="text-2xl font-bold mt-8 mb-4">Załączniki</h2>
+
+                    <% if (zalaczniki.length > 0) { %>
+                        <ul class="list-disc list-inside">
+                            <% zalaczniki.forEach(zalacznik => { %>
+                                <li class="text-blue-600 hover:underline">
+                                    <a href="/uploads/<%= zalacznik.Sciezka %>" target="_blank">
+                                        <%= zalacznik.Nazwa_pliku %>
+                                    </a>
+                                    <% if (user.rola !== 'ubezpieczony') { %>
+                                        <form action="/sprawa/<%= sprawa.Id_sprawa %>/usun-zalacznik/<%= zalacznik.Id_zalacznik %>" method="POST" style="display:inline;">
+                                            <button type="submit" class="btn btn-danger btn-sm">Usuń</button></form>
+                                        <% } %>
+
+                                </li>
+                                <% }) %>
+                        </ul>
+                        <% } else { %>
+                            <p class="text-gray-500">Brak załączników.</p>
+                            <% } %>
+                                <!-- Formularz nowej wiadomości -->
+                                <div class="mt-8">
+                                    <h3 class="text-xl font-bold mb-2">Napisz nową wiadomość</h3>
+                                    <form action="/sprawa/<%= sprawa.Id_sprawa %>/wiadomosc" method="POST" class="space-y-4">
+                                        <textarea name="tresc" required class="w-full p-2 border rounded" placeholder="Treść wiadomości"></textarea>
+                                        <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">Wyślij</button>
+                                    </form>
+                                </div>
+
+                                <!-- Formularz uploadu załącznika -->
+                                <div class="mt-8">
+                                    <h3 class="text-xl font-bold mb-2">Dodaj załącznik</h3>
+                                    <form action="/sprawa/<%= sprawa.Id_sprawa %>/zalacznik" method="POST" enctype="multipart/form-data" class="space-y-4">
+                                        <input type="file" name="zalacznik" required class="block">
+                                        <button type="submit" class="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">Prześlij plik</button>
+                                    </form>
+                                </div>
+                                <% if (user.rola !== 'ubezpieczony') { %>
+                                    <!-- Formularz zmiany stanu -->
+                                    <div class="mt-8">
+                                        <h3 class="text-xl font-bold mb-2">Zmień stan sprawy</h3>
+                                        <form action="/sprawa/<%= sprawa.Id_sprawa %>/zmien-stan" method="POST" class="space-y-4">
+                                            <select name="nowyStan" required class="w-full p-2 border rounded">
+            <option value="">-- Wybierz stan --</option>
+            <option value="W toku">W toku</option>
+            <option value="Zamknięta">Zamknięta</option>
+            <option value="Oczekuje na dokumenty">Oczekuje na dokumenty</option>
+            <option value="Odrzucona">Odrzucona</option>
+        </select>
+
+                                            <textarea name="komentarz" class="w-full p-2 border rounded" placeholder="Komentarz do zmiany stanu (opcjonalnie)"></textarea>
+
+                                            <button type="submit" class="bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600">Zapisz zmianę</button>
+                                        </form>
+                                        <% } %>
+                                    </div>
+
+
+    </div>
+
+
+</body>
+
+</html>

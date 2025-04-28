@@ -3,241 +3,66 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Panel użytkownika</title>
-    <!-- <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        
-        .sprawa {
-            border: 1px solid #ccc;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .ticket {
-            background: #f4f4f4;
-            padding: 10px;
-            margin-top: 10px;
-        }
-        
-        .zalaczniki img {
-            max-width: 150px;
-            max-height: 150px;
-            display: block;
-            margin-bottom: 5px;
-        }
-        
-        .zalacznik-link {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 5px 0;
-        }
-    </style> -->
-    <link href="/style.css" rel="stylesheet">
-
-
+    <title>Sprawy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body>
-    <h1>Witaj,
-        <%= user.imie %>
-            <%= user.id %>
-                <%= user.nazwisko %>!</h1>
-    <form action="/logout" method="POST">
-        <button type="submit" class="btn">Wyloguj</button>
-    </form>
-    <% if (user && user.rola === 'agent') { %>
-        <a href="/panel-agent" class="btn-link">Panel Agenta</a>
-        <% } %>
+<body class="bg-gray-100 min-h-screen">
 
-
-            <h2>Twoje sprawy</h2>
-
-            <% if (user.rola === 'ubezpieczony') { %>
-                <form action="/zgloszenie" method="POST">
-                    <h3>Nowe zgłoszenie</h3>
-                    <input type="text" name="Imie" placeholder="Imię" required>
-                    <input type="text" name="Nazwisko" placeholder="Nazwisko" required>
-                    <input type="text" name="Adres" placeholder="Adres" required>
-                    <input type="text" name="Telefon" placeholder="Telefon" required>
-                    <input type="email" name="Mail" placeholder="Email" required>
-                    <textarea name="Opis" placeholder="Opis zgłoszenia" required></textarea>
-                    <button type="submit" class="btn">Zgłoś</button>
-                </form>
-                <% } %>
-
-                    <table>
-                        <thead>
-                            <tr>
-                                <th><a href="/?sort=Id_sprawa&order=<%= (sortColumn === 'Id_sprawa' && sortOrder === 'ASC') ? 'desc' : 'asc' %>">ID sprawy</a></th>
-                                <th><a href="/?sort=Imie&order=<%= (sortColumn === 'Imie' && sortOrder === 'ASC') ? 'desc' : 'asc' %>">Imię</a></th>
-                                <th><a href="/?sort=Nazwisko&order=<%= (sortColumn === 'Nazwisko' && sortOrder === 'ASC') ? 'desc' : 'asc' %>">Nazwisko</a></th>
-                                <th><a href="/?sort=Id_kategoria&order=<%= (sortColumn === 'Id_kategoria' && sortOrder === 'ASC') ? 'desc' : 'asc' %>">ID Kategorii</a></th>
-                                <th><a href="/?sort=Adres&order=<%= (sortColumn === 'Adres' && sortOrder === 'ASC') ? 'desc' : 'asc' %>">Adres</a></th>
-                                <th><a href="/?sort=Telefon&order=<%= (sortColumn === 'Telefon' && sortOrder === 'ASC') ? 'desc' : 'asc' %>">Telefon</a></th>
-                                <th><a href="/?sort=Mail&order=<%= (sortColumn === 'Mail' && sortOrder === 'ASC') ? 'desc' : 'asc' %>">Mail</a></th>
-                                <th><a href="/?sort=Opis&order=<%= (sortColumn === 'Opis' && sortOrder === 'ASC') ? 'desc' : 'asc' %>">Opis</a></th>
-                                <th><a href="/?sort=Stan&order=<%= (sortColumn === 'Stan' && sortOrder === 'ASC') ? 'desc' : 'asc' %>">Stan</a></th>
-                                <th><a href="/?sort=Id_agent&order=<%= (sortColumn === 'Id_agent' && sortOrder === 'ASC') ? 'desc' : 'asc' %>">ID Agenta</a></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% sprawy.forEach(sprawa => { %>
-                                <tr>
-                                    <td>
-                                        <%= sprawa.Id_sprawa %>
-                                    </td>
-                                    <td>
-                                        <%= sprawa.Imie %>
-                                    </td>
-                                    <td>
-                                        <%= sprawa.Nazwisko %>
-                                    </td>
-                                    <td>
-                                        <%= sprawa.Id_kategoria %>
-                                    </td>
-                                    <td>
-                                        <%= sprawa.Adres %>
-                                    </td>
-                                    <td>
-                                        <%= sprawa.Telefon %>
-                                    </td>
-                                    <td>
-                                        <%= sprawa.Mail %>
-                                    </td>
-                                    <td>
-                                        <%= sprawa.Opis %>
-                                    </td>
-                                    <td>
-                                        <%= sprawa.Stan %>
-                                    </td>
-                                    <td>
-                                        <%= sprawa.Id_agent %>
-                                    </td>
-                                </tr>
-
-                        </tbody>
-                    </table>
-
-
-
-
-                    <% if (user.rola === 'ubezpieczyciel' ) { %>
-                        <form action="/sprawa/<%= sprawa.Id_sprawa %>/ticket" method="POST">
-                            <textarea name="Tresc" placeholder="Dodaj notatkę..." required></textarea>
-                            <button type="submit" class="btn">Dodaj ticket</button>
+    <nav class="bg-blue-600 p-4 text-white flex justify-between">
+        <div class="font-bold text-xl">Twoje Sprawy</div>
+        <div>
+            <%= user.imie %>
+                <%= user.nazwisko %> (
+                    <%= user.rola %>)
+                        <form action="/logout" method="POST" style="display: inline;">
+                            <button type="submit" class="btn btn-outline-secondary">Wyloguj</button>
                         </form>
+        </div>
 
-                        <form action="/sprawa/edytuj/<%= sprawa.Id_sprawa %>" method="POST">
-                            <h4>Edycja sprawy</h4>
-                            <input type="text" name="Imie" value="<%= sprawa.Imie %>" required>
-                            <input type="text" name="Nazwisko" value="<%= sprawa.Nazwisko %>" required>
-                            <input type="text" name="Id_kategoria" placeholder="Kategoria (ID)" value="<%= sprawa.Id_kategoria %>">
-                            <input type="text" name="Adres" value="<%= sprawa.Adres %>" required>
-                            <input type="text" name="Telefon" value="<%= sprawa.Telefon %>" required>
-                            <input type="email" name="Mail" value="<%= sprawa.Mail %>" required>
-                            <textarea name="Opis"><%= sprawa.Opis %></textarea>
-                            <input type="text" name="Stan" value="<%= sprawa.Stan %>" required>
-                            <input type="text" name="Id_agent" placeholder="Agent (ID)" value="<%= sprawa.Id_agent %>">
-                            <button type="submit" class="btn">Zapisz zmiany</button>
-                        </form>
+    </nav>
 
-                        <form action="/sprawa/usun/<%= sprawa.Id_sprawa %>" method="POST">
-                            <button type="submit" class="btn" onclick="return confirm('Na pewno chcesz usunąć sprawę?')">Usuń sprawę</button>
-                        </form>
+    <div class="max-w-7xl mx-auto py-8 px-4">
+        <h1 class="text-3xl font-bold mb-8">Lista spraw</h1>
 
-                        <form action="/sprawa/<%= sprawa.Id_sprawa %>/upload" method="POST" enctype="multipart/form-data">
-                            <input type="file" name="zalacznik" required>
-                            <button type="submit" class="btn">Wyślij załącznik</button>
-                        </form>
-                        <% } %>
-
-                            <% if (Array.isArray(sprawa.zalaczniki) && sprawa.zalaczniki.length > 0) { %>
-
-
-                                <div class="zalaczniki">
-                                    <h4>Załączniki:</h4>
-                                    <ul>
-                                        <% sprawa.zalaczniki.forEach(z => { %>
-                                            <li class="zalacznik-link">
-                                                <% if (z && z.nazwa_pliku && z.nazwa_pliku.match(/\.(jpg|jpeg|png|gif)$/i)) { %>
-
-
-                                                    <img src="/uploads/<%= z.Nazwa_pliku %>" alt="obraz">
-                                                    <% } else if (z && z.Nazwa_pliku && z.Nazwa_pliku.match(/\.(pdf)$/i)) { %>
-                                                        <img src="/uploads/<%= z.Nazwa_pliku %>" /> 📄 <a href="/uploads/<%= z.Nazwa_pliku %>" target="_blank">PDF: <%= z.Nazwa_pliku %></a>
-                                                        <% } else { %>
-                                                            📎
-                                                            <a href="/uploads/<%= z.Nazwa_pliku %>" target="_blank">
-                                                                                <img src="/uploads/<%= z.Nazwa_pliku %>"/>
-                                                                                <%= z.Nazwa_pliku %>
-                                                                            </a>
-                                                            <% } %>
-                                                                <form method="POST" action="/zalacznik/usun/<%= z.Id_zalacznik %>" style="display:inline;">
-                                                                    <button type="submit" class="btn">🗑 Usuń</button>
-                                                                </form>
-                                            </li>
-                                            <% }) %>
-                                    </ul>
-                                </div>
-                                <% } %>
-                                    </div>
-                                    <% }) %>
-
-
-                                        <script>
-                                            // PUBLIC VAPID KEY (Ten sam który masz na serwerze)
-                                            const publicVapidKey = 'BLht_0mpJxGjR9mG0a_CUNflW0gEaAE0Qy59jyBoC-sqAM3jLDpdEaImHQYXbZZL7PqNWj9MEtQOJg43hcneiN8';
-
-                                            // Rejestracja service workera + subskrypcja
-                                            async function registerPush() {
-                                                if ('serviceWorker' in navigator) {
-                                                    try {
-                                                        const registration = await navigator.serviceWorker.register('/sw.js', {
-                                                            scope: '/'
-                                                        });
-
-                                                        console.log('✅ Service Worker zarejestrowany');
-
-                                                        const subscription = await registration.pushManager.subscribe({
-                                                            userVisibleOnly: true,
-                                                            applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
-                                                        });
-
-                                                        await fetch('/subscribe', {
-                                                            method: 'POST',
-                                                            body: JSON.stringify(subscription),
-                                                            headers: {
-                                                                'Content-Type': 'application/json'
-                                                            }
-                                                        });
-
-                                                        console.log('✅ Subskrypcja push zapisana!');
-                                                    } catch (error) {
-                                                        console.error('❌ Błąd podczas rejestracji push:', error);
-                                                    }
-                                                } else {
-                                                    console.warn('Push notifications nie są wspierane w Twojej przeglądarce.');
-                                                }
-                                            }
-
-                                            // Funkcja pomocnicza do konwersji klucza
-                                            function urlBase64ToUint8Array(base64String) {
-                                                const padding = '='.repeat((4 - base64String.length % 4) % 4);
-                                                const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-
-                                                const rawData = window.atob(base64);
-                                                const outputArray = new Uint8Array(rawData.length);
-
-                                                for (let i = 0; i < rawData.length; ++i) {
-                                                    outputArray[i] = rawData.charCodeAt(i);
-                                                }
-                                                return outputArray;
-                                            }
-                                        </script>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <% sprawy.forEach(sprawa => { %>
+                <div class="bg-white shadow-md rounded-lg p-6 flex flex-col justify-between hover:shadow-lg transition-shadow">
+                    <div>
+                        <h2 class="text-xl font-semibold mb-2 text-gray-800">
+                            <%= sprawa.Imie %>
+                                <%= sprawa.Nazwisko %>
+                        </h2>
+                        <p class="text-gray-600"><strong>Kategoria:</strong>
+                            <%= sprawa.Id_kategoria %>
+                        </p>
+                        <p class="text-gray-600"><strong>Adres:</strong>
+                            <%= sprawa.Adres %>
+                        </p>
+                        <p class="text-gray-600"><strong>Telefon:</strong>
+                            <%= sprawa.Telefon %>
+                        </p>
+                        <p class="text-gray-600"><strong>Mail:</strong>
+                            <%= sprawa.Mail %>
+                        </p>
+                        <p class="text-gray-600"><strong>Opis:</strong>
+                            <%= sprawa.Opis.substring(0, 100) %>...</p>
+                        <p class="text-gray-600"><strong>Stan:</strong>
+                            <%= sprawa.Stan %>
+                        </p>
+                        <p class="text-gray-600"><strong>Agent:</strong>
+                            <%= sprawa.Id_agent %>
+                        </p>
+                    </div>
+                    <div class="mt-4">
+                        <a href="/sprawa/<%= sprawa.Id_sprawa %>" class="block w-full text-center bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            Zobacz szczegóły
+                        </a>
+                    </div>
+                </div>
+                <% }) %>
+        </div>
+    </div>
 
 </body>
 
