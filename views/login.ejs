@@ -5,6 +5,39 @@
     <meta charset="UTF-8">
     <title>Logowanie</title>
     <link rel="stylesheet" href="/style.css">
+    <script>
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(function(registration) {
+                    console.log('Service Worker zarejestrowany', registration);
+                    return Notification.requestPermission();
+                })
+                .then(function(permission) {
+                    if (permission !== 'granted') {
+                        throw new Error('Brak zgody na powiadomienia');
+                    }
+                    return navigator.serviceWorker.ready;
+                })
+                .then(function(registration) {
+                    return registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: 'BIczqjHaPmtwPbrZmUCA-FO8tqef1qvRtr0BJ17orlfyVh5bAYzgRKwxy4TqG-vARm2uOllySOW6B6bpv7SlFfs'
+                    });
+                })
+                .then(function(subscription) {
+                    return fetch('/api/subscribe', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(subscription)
+                    });
+                })
+                .then(() => console.log('Subskrybowano push'))
+                .catch(console.error);
+        }
+    </script>
+
 </head>
 
 <body>

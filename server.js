@@ -6,8 +6,55 @@ const fs = require('fs');
 const multer = require('multer');
 const db = require('./db');
 
-const app = express();
+const nodemailer = require('nodemailer');
+const webpush = require('web-push');
+const sqlite3 = require('sqlite3');
+
+
+
 const PORT = 3000;
+const https = require('https');
+const app = express();
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
+
+
+
+// Ustaw klucze VAPID (musisz je wcześniej wygenerować)
+webpush.setVapidDetails(
+    'mailto:naughtylius@o2.pl',
+    'BLht_0mpJxGjR9mG0a_CUNflW0gEaAE0Qy59jyBoC-sqAM3jLDpdEaImHQYXbZZL7PqNWj9MEtQOJg43hcneiN8',
+    'Bvupoz_593SAz8qWP3cMjeAWRZFbfPkKyydSfysgDgc'
+);
+
+function sendPushNotification(subscription, payload) {
+    webpush.sendNotification(subscription, JSON.stringify(payload))
+        .then(response => {
+            console.log('✅ Powiadomienie wysłane');
+        })
+        .catch(err => {
+            console.error('❌ Błąd przy wysyłaniu push:', err);
+        });
+}
+
+// Konfiguracja sesji
+app.use(session({
+    secret: 'twoj-sekret', // Zmien na unikalny sekret, może być długi ciąg znaków
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: true } // Zmien na true, jeśli masz HTTPS
+}));
+
+
+
+
+
+
+app.use(express.json());
 
 app.use((req, res, next) => {
     // Sprawdzanie, czy sesja istnieje
@@ -18,6 +65,10 @@ app.use((req, res, next) => {
     }
     next();
 });
+
+
+
+
 
 
 // Middleware
@@ -33,6 +84,83 @@ app.use(session({
     saveUninitialized: true,
     cookie: { maxAge: 1000 * 60 * 60 * 24 } // Sesja trwa 24 godziny
 }));
+
+//nodemailer
+const transporter = nodemailer.createTransport({
+    host: 'smtp.poczta.o2.pl',
+    port: 465, // albo 587 jeśli chcesz TLS bez SSL
+    secure: true, // true dla portu 465, false dla 587
+    auth: {
+        user: 'naughtylius@o2.pl',
+        pass: 'Naughty123'
+    }
+});
+//nodeKey
+webpush.setVapidDetails(
+    'mailto:anvil.Smithy@gmail.com',
+    'BDuwKR-rrooxTxsIraHgkdpZNOxr1Oef8uGIM-Bg6-LSoTZtTo0IXYgFVaV3DsF7sz5rTcHZnt5fLdlyIqZ_2zQ',
+    'T_d3pq4VZoxpOfrwvHK-sMYppAz_BbASRJVR2kAQ0Uw'
+);
+
+//API Subscribe 4 email
+app.post('/api/subscribe', (req, res) => {
+    const sub = req.body;
+    if (!req.session || !req.session.user) {
+        console.log("Brak sesji użytkownika");
+        return res.status(401).json({ error: 'Brak użytkownika' });
+    }
+
+    const userId = req.session.user.id;
+
+    console.log("Zapisuję subskrypcję dla userId:", userId);
+    console.log("Dane subskrypcji:", JSON.stringify(sub));
+
+    const stmt = db.prepare("UPDATE Uzytkownik SET push_subscription = ? WHERE id = ?");
+    const result = stmt.run(JSON.stringify(sub), userId);
+
+    console.log("Wynik zapisu:", result);
+
+    res.status(201).json({ message: 'Zapisano subskrypcję push' });
+});
+
+app.post('/sprawa/:id/update', (req, res) => {
+    const { id } = req.params;
+    const { nowyStatus } = req.body;
+
+    db.run('UPDATE Sprawy SET status = ? WHERE id = ?', [nowyStatus, id], function(err) {
+        if (err) {
+            console.error('❌ Błąd przy aktualizacji sprawy:', err);
+            return res.status(500).send('Błąd serwera');
+        }
+
+        // 1. Pobieramy wszystkie subskrypcje push
+        db.all('SELECT push_subscription FROM Uzytkownik WHERE push_subscription IS NOT NULL', [], (err, rows) => {
+            if (err) {
+                console.error('❌ Błąd przy pobieraniu subskrypcji:', err);
+                return res.status(500).send('Błąd przy pobieraniu subskrypcji');
+            }
+
+            // 2. Wysyłamy powiadomienia
+            rows.forEach(row => {
+                try {
+                    const subscription = JSON.parse(row.push_subscription);
+
+                    sendPushNotification(subscription, {
+                        title: 'Zmiana sprawy!',
+                        body: `Sprawa o ID ${id} zmieniła status na: ${nowyStatus}`,
+                        icon: '/icons/notification-icon.png'
+                    });
+                } catch (e) {
+                    console.error('❌ Błąd przy parsowaniu subskrypcji:', e);
+                }
+            });
+
+            res.send('✅ Sprawa zaktualizowana i powiadomienia wysłane');
+        });
+    });
+});
+
+
 
 
 function isLoggedIn(req) {
@@ -75,25 +203,135 @@ db.run(`
 `);
 
 // Autoryzacja
-app.get('/login', (req, res) => res.render('login'));
-app.post('/login', (req, res) => {
-    const { email, haslo } = req.body;
-    db.get('SELECT * FROM Uzytkownik WHERE email = ? AND haslo = ?', [email, haslo], (err, user) => {
-        if (err) return res.status(500).send('Błąd serwera');
-        if (!user) return res.send('Nieprawidłowy login lub hasło');
-        req.session.user = user;
-        res.redirect('/');
-    });
+
+
+
+// ✅ Rejestracja - działa z sqlite3
+app.get('/register', (req, res) => res.render('register'));
+
+app.post('/register', async(req, res) => {
+    const { imie, nazwisko, email, haslo, rola } = req.body;
+    try {
+        db.get('SELECT * FROM Uzytkownik WHERE email = ?', [email], async(err, existingUser) => {
+            if (err) {
+                console.error('❌ Błąd przy sprawdzaniu użytkownika:', err);
+                return res.status(500).send('Błąd serwera');
+            }
+            if (existingUser) {
+                return res.status(400).send('❌ Użytkownik z tym adresem email już istnieje.');
+            }
+
+            const hashedPassword = await bcrypt.hash(haslo, saltRounds);
+
+            db.run('INSERT INTO Uzytkownik (imie, nazwisko, email, haslo, rola) VALUES (?, ?, ?, ?, ?)', [imie, nazwisko, email, hashedPassword, rola],
+                function(err) {
+                    if (err) {
+                        console.error('❌ Błąd przy rejestracji:', err);
+                        return res.status(500).send('Błąd przy rejestracji');
+                    }
+                    res.redirect('/login');
+                }
+            );
+        });
+    } catch (err) {
+        console.error('❌ Błąd podczas rejestracji:', err);
+        res.status(500).send('Błąd serwera podczas rejestracji');
+    }
 });
 
-app.get('/register', (req, res) => res.render('register'));
-app.post('/register', (req, res) => {
-    const { imie, nazwisko, email, haslo, rola } = req.body;
-    db.run('INSERT INTO Uzytkownik (imie, nazwisko, email, haslo, rola) VALUES (?, ?, ?, ?, ?)', [imie, nazwisko, email, haslo, rola], function(err) {
-        if (err) return res.send('Błąd przy rejestracji: ' + err.message);
-        res.redirect('/login');
-    });
+// ✅ Logowanie - działa z sqlite3
+app.get('/login', (req, res) => res.render('login'));
+
+app.post('/login', async(req, res) => {
+    const { email, haslo } = req.body;
+    try {
+        db.get('SELECT * FROM Uzytkownik WHERE email = ?', [email], async(err, user) => {
+            if (err) {
+                console.error('❌ Błąd przy szukaniu użytkownika:', err);
+                return res.status(500).send('Błąd serwera');
+            }
+            if (!user) {
+                return res.send('Nieprawidłowy login lub hasło');
+            }
+
+            const passwordMatch = await bcrypt.compare(haslo, user.haslo);
+
+            if (passwordMatch) {
+                req.session.user = {
+                    id: user.id,
+                    imie: user.imie,
+                    nazwisko: user.nazwisko,
+                    email: user.email,
+                    rola: user.rola,
+                    push_subscription: user.push_subscription
+                };
+                res.redirect('/');
+            } else {
+                res.send('Nieprawidłowy login lub hasło');
+            }
+        });
+    } catch (err) {
+        console.error('❌ Błąd podczas logowania:', err);
+        res.status(500).send('Błąd serwera podczas logowania');
+    }
 });
+
+// ✅ Rejestracja - z haszowaniem hasła
+// app.get('/register', (req, res) => res.render('register'));
+
+// app.post('/register', async(req, res) => {
+//     const { imie, nazwisko, email, haslo, rola } = req.body;
+//     try {
+//         const existingUser = db.prepare('SELECT * FROM Uzytkownik WHERE email = ?').get(email);
+
+//         if (existingUser) {
+//             return res.status(400).send('❌ Użytkownik z tym adresem email już istnieje.');
+//         }
+
+//         const hashedPassword = await bcrypt.hash(haslo, saltRounds);
+
+//         db.run('INSERT INTO Uzytkownik (imie, nazwisko, email, haslo, rola) VALUES (?, ?, ?, ?, ?)', [imie, nazwisko, email, hashedPassword, rola], function(err) {
+//             if (err) return res.send('Błąd przy rejestracji: ' + err.message);
+//             res.redirect('/login');
+//         });
+//     } catch (err) {
+//         console.error('❌ Błąd podczas rejestracji:', err);
+//         res.status(500).send('Błąd serwera podczas rejestracji');
+//     }
+// });
+
+// // ✅ Logowanie - z porównywaniem haszowanego hasła
+// app.get('/login', (req, res) => res.render('login'));
+
+// app.post('/login', async(req, res) => {
+//     const { email, haslo } = req.body;
+//     try {
+//         const user = db.prepare('SELECT * FROM Uzytkownik WHERE email = ?').get(email);
+
+//         if (!user) {
+//             return res.send('Nieprawidłowy login lub hasło');
+//         }
+
+//         const passwordMatch = await bcrypt.compare(haslo, user.haslo);
+
+//         if (passwordMatch) {
+//             req.session.user = {
+//                 id: user.id,
+//                 imie: user.imie,
+//                 nazwisko: user.nazwisko,
+//                 email: user.email,
+//                 rola: user.rola
+//             };
+//             res.redirect('/');
+//         } else {
+//             res.send('Nieprawidłowy login lub hasło');
+//         }
+//     } catch (err) {
+//         console.error('❌ Błąd podczas logowania:', err);
+//         res.status(500).send('Błąd serwera podczas logowania');
+//     }
+// });
+
 
 app.get('/logout', (req, res) => {
     req.session.destroy(() => res.redirect('/login'));
@@ -113,6 +351,10 @@ app.get('/', (req, res) => {
     const data = {};
     const user = req.session.user;
 
+    const allowedColumns = ['Id_sprawa', 'Imie', 'Nazwisko', 'Id_kategoria', 'Adres', 'Telefon', 'Mail', 'Opis', 'Stan', 'Id_agent'];
+    const sortColumn = allowedColumns.includes(req.query.sort) ? req.query.sort : 'Id_sprawa';
+    const sortOrder = req.query.order === 'desc' ? 'DESC' : 'ASC';
+
     db.all('SELECT * FROM Agent', [], (err, agents) => {
         if (err) return res.status(500).send(err.message);
         data.agents = agents;
@@ -122,8 +364,8 @@ app.get('/', (req, res) => {
             data.categories = categories;
 
             const query = user.rola === 'ubezpieczony' ?
-                'SELECT * FROM Sprawa WHERE Id_uzytkownik = ?' :
-                'SELECT * FROM Sprawa';
+                `SELECT * FROM Sprawa WHERE Id_uzytkownik = ? ORDER BY ${sortColumn} ${sortOrder}` :
+                `SELECT * FROM Sprawa ORDER BY ${sortColumn} ${sortOrder}`;
 
             const params = user.rola === 'ubezpieczony' ? [user.id] : [];
 
@@ -156,6 +398,8 @@ app.get('/', (req, res) => {
                     .then(sprawyWithTickets => {
                         data.sprawy = sprawyWithTickets;
                         data.user = user;
+                        data.sortColumn = sortColumn;
+                        data.sortOrder = sortOrder;
                         res.render('index', data);
                     })
                     .catch(err => res.status(500).send("Błąd przy pobieraniu historii"));
@@ -163,6 +407,8 @@ app.get('/', (req, res) => {
         });
     });
 });
+
+
 
 // Dodanie zgłoszenia
 app.post('/zgloszenie', (req, res) => {
@@ -485,111 +731,13 @@ app.post('/agent/update-status', (req, res) => {
 
 
 
+// ładujesz certyfikaty
+const options = {
+    key: fs.readFileSync(path.join(__dirname, 'localhost-key.pem')),
+    cert: fs.readFileSync(path.join(__dirname, 'localhost.pem'))
+};
 
-//STARE sprawy dla agenta
-// // Panel Agenta - sprawy przypisane do zalogowanego agenta
-// app.get('/panel-agent', (req, res) => {
-//     if (!isLoggedIn(req) || req.session.user.rola !== 'agent') {
-//         return res.status(403).send('Brak dostępu');
-//     }
-
-//     const agentId = req.session.user.id;
-//     db.all(`
-//         SELECT * FROM Sprawa
-//         WHERE Id_agent = ?
-
-//     `, [agentId], (err, sprawy) => {
-//         if (err) return res.status(500).send('Błąd pobierania spraw');
-
-//         // Dla każdej sprawy pobieramy tickety
-//         const sprawyPromises = sprawy.map(sprawa => {
-//             return new Promise((resolve, reject) => {
-//                 db.all(`
-//                     SELECT Ticket.*, Uzytkownik.imie || ' ' || Uzytkownik.nazwisko AS Autor
-//                     FROM Ticket
-//                     LEFT JOIN Uzytkownik ON Ticket.Id_uzytkownik = Uzytkownik.id
-//                     WHERE Ticket.Id_sprawa = ?
-//                     ORDER BY Ticket.Data DESC
-//                 `, [sprawa.Id_sprawa], (err, tickets) => {
-//                     if (err) reject(err);
-//                     sprawa.tickets = tickets;
-//                     resolve(sprawa);
-//                 });
-//             });
-//         });
-
-//         Promise.all(sprawyPromises)
-//             .then(sprawyWithTickets => {
-//                 res.render('panel-agent', {
-//                     user: req.session.user,
-//                     sprawy: sprawyWithTickets
-//                 });
-//             })
-//             .catch(err => res.status(500).send("Błąd przy pobieraniu ticketa"));
-//     });
-// });
-
-// app.post('/agent/sprawa/:id/aktualizuj', (req, res) => {
-//     if (!isLoggedIn(req) || req.session.user.rola !== 'agent') {
-//         return res.status(403).send('Brak uprawnień');
-//     }
-
-//     const sprawaId = req.params.id;
-//     const { status, komentarz } = req.body;
-
-//     db.run(`
-//         UPDATE Sprawa
-//         SET Stan = ?, Komentarz = ?
-//         WHERE Id_sprawa = ? AND Id_agent = ?
-//     `, [status, komentarz, sprawaId, req.session.user.id], function(err) {
-//         if (err) {
-//             console.error("Błąd aktualizacji sprawy:", err.message);
-//             return res.status(500).send("Błąd przy aktualizacji sprawy");
-//         }
-//         res.redirect('/panel-agent');
-//     });
-// });
-
-// app.post('/panel-agent/sprawa/:id/status', (req, res) => {
-//     if (!isLoggedIn(req) || req.session.user.rola !== 'agent') {
-//         return res.status(403).send('Brak dostępu');
-//     }
-
-//     const sprawaId = req.params.id;
-//     const { nowyStatus } = req.body;
-//     const userId = req.session.user.id;
-
-//     db.run(`
-//         UPDATE Sprawa SET Stan = ? WHERE Id_sprawa = ?
-//     `, [nowyStatus, sprawaId], function(err) {
-//         if (err) return res.status(500).send('Błąd aktualizacji statusu');
-
-//         db.run(`
-//             INSERT INTO Ticket (Id_sprawa, Tresc, Typ, Id_uzytkownik)
-//             VALUES (?, ?, 'Status', ?)
-//         `, [sprawaId, `Zmieniono status na: ${nowyStatus}`, userId], () => {
-//             res.redirect('/panel-agent');
-//         });
-//     });
-// });
-// app.post('/panel-agent/sprawa/:id/komentarz', (req, res) => {
-//     if (!isLoggedIn(req) || req.session.user.rola !== 'agent') {
-//         return res.status(403).send('Brak dostępu');
-//     }
-
-//     const sprawaId = req.params.id;
-//     const userId = req.session.user.id;
-//     const { komentarz } = req.body;
-
-// db.run(`
-//     INSERT INTO Ticket (Id_sprawa, Tresc, Typ, Id_uzytkownik)
-//     VALUES (?, ?, 'Komentarz', ?)
-// `, [sprawaId, komentarz, userId], (err) => {
-//     if (err) return res.status(500).send('Błąd dodawania komentarza');
-//     res.redirect('/panel-agent');
-// });
-//});
-
-app.listen(PORT, () => {
-    console.log(`Serwer działa na http://localhost:${PORT}`);
+// start serwera HTTPS
+https.createServer(options, app).listen(3443, () => {
+    console.log('✅ Serwer HTTPS działa na https://localhost:3443');
 });
